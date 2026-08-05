@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ICCU-786 Lote 4 · Estado de Entregas</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --ok:#16a34a; --okbg:#dcfce7; --fir:#0891b2; --firbg:#cffafe;
+  --rev:#2563eb; --revbg:#dbeafe; --obs:#d97706; --obsbg:#fef3c7;
+  --pen:#94a3b8; --penbg:#f1f5f9;
+  --ink:#0f172a; --ink2:#334155; --muted:#64748b; --line:#e2e8f0;
+  --panel:#fff; --bg:#f4f6fa; --brand:#0b3b6f; --brand2:#1e5ba6;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-apple-system,Roboto,Arial,sans-serif;font-size:13.5px;line-height:1.4}
+.app{max-width:1720px;margin:0 auto;padding:16px 20px 60px}
+.header{background:linear-gradient(120deg,var(--brand) 0%,var(--brand2) 70%,#3b82f6 100%);color:#fff;border-radius:14px;padding:18px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:18px;box-shadow:0 4px 16px rgba(11,59,111,.25)}
+.header h1{margin:0;font-size:21px;font-weight:700}
+.header .sub{opacity:.92;font-size:13px;margin-top:3px}
+.header .cut{margin-left:auto;text-align:right;font-size:12.5px;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.25)}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+.kpi .n{font-size:26px;font-weight:800;line-height:1.1}
+.kpi .t{color:var(--muted);font-size:12px;margin-top:2px}
+.kpi.big .n{color:var(--brand2)} .kpi.ok .n{color:var(--ok)} .kpi.fir .n{color:var(--fir)}
+.kpi.rev .n{color:var(--rev)} .kpi.obs .n{color:var(--obs)} .kpi.pen .n{color:var(--muted)}
+.progressbar{grid-column:1/-1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.pb-track{height:18px;border-radius:9px;background:var(--penbg);overflow:hidden;display:flex;margin-top:8px}
+.pb-seg{height:100%}
+.pb-lab{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin-top:8px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.tabs{display:flex;gap:8px;margin:6px 0 14px;flex-wrap:wrap}
+.tab{padding:10px 22px;border-radius:10px 10px 0 0;background:#e6ecf4;border:1px solid var(--line);border-bottom:none;cursor:pointer;font-weight:600;color:var(--ink2);font-size:14px}
+.tab.active{background:var(--panel);color:var(--brand);border-top:3px solid var(--brand2)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:0 12px 12px 12px;padding:16px;box-shadow:0 1px 4px rgba(15,23,42,.06)}
+.sec{color:var(--brand);font-size:15px;margin:0 0 10px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ink2);margin:4px 0 12px}
+.note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.55}
+.mtable{border-collapse:separate;border-spacing:0;width:100%;font-size:12px}
+.mtable th{background:#eef3fa;color:var(--brand);font-weight:700;padding:8px 8px;border:1px solid var(--line);position:sticky;top:0;z-index:2;text-align:center}
+.mtable td{border:1px solid var(--line);padding:6px 8px;vertical-align:top}
+.volcell{background:#fbfcfe;font-weight:600;color:var(--ink2);white-space:nowrap;position:sticky;left:0;z-index:1}
+.volcell .rom{color:var(--brand2);font-weight:800;margin-right:6px}
+.volcell .vn{color:var(--muted);font-weight:400;font-size:11px;display:block}
+.cell .cv{font-weight:700}
+.cell .cf{font-size:11.5px}
+.cell .cr{font-size:10.5px;color:var(--muted);word-break:break-all}
+.cell .c2{font-size:10px;color:var(--muted);border-top:1px dashed #cbd5e1;margin-top:4px;padding-top:3px}
+.td-A{background:var(--okbg)} .td-F{background:var(--firbg)} .td-T{background:var(--revbg)}
+.td-C{background:var(--obsbg)} .td-P{background:var(--penbg)}
+.est{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
+.est-A{background:var(--ok);color:#fff} .est-F{background:var(--fir);color:#fff}
+.est-T{background:var(--rev);color:#fff} .est-C{background:var(--obs);color:#fff}
+.est-P{background:var(--pen);color:#fff}
+.cbar{display:flex;align-items:center;gap:8px;margin:4px 0}
+.cbar .cl{flex:0 0 215px;font-size:12px;text-align:right;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbar .ct{flex:1;height:18px;background:#f1f5f9;border-radius:5px;overflow:hidden}
+.cbar .cf{height:100%;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+.cbar .cvv{flex:0 0 118px;font-size:11.5px;text-align:right;font-weight:700;color:var(--ink2)}
+.gtip{position:fixed;z-index:50;background:#0f172a;color:#f1f5f9;padding:10px 12px;border-radius:8px;font-size:12px;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none;display:none;line-height:1.5}
+.gtip b{color:#93c5fd}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.header .cut{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div>
+      <h1>Contrato ICCU-786-2025 · Lote 4 — Estado de Entregas</h1>
+      <div class="sub">Consultor PROBINTEC SAS · Interventoría TERRA PROYECTOS CIVILES · 7 tramos · 19 componentes por tramo · estado deducido del último oficio</div>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <label id="lblPres" style="display:flex;align-items:center;gap:7px;font-size:12.5px;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.25);cursor:pointer;user-select:none">
+      <input type="checkbox" id="chkPres" onchange="modoPresentacion(this.checked)" style="cursor:pointer">
+      <span>Modo presentación</span>
+    </label>
+    <div class="cut" style="margin-left:0"><b>Corte de datos:</b> <span id="corte"></span> · <b>Hoy:</b> <span id="hoyd"></span><br>Fuente: <span id="fuente">Google Sheets</span> · <a href="#" onclick="recargar();return false" style="color:#bfdbfe">Actualizar</a></div>
+    </div>
+  </div>
+
+  <div id="cargando" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:34px;margin:16px 0;text-align:center;color:var(--muted)">
+    <div style="font-size:15px;font-weight:600;color:var(--brand)">Cargando datos…</div>
+    <div style="font-size:12.5px;margin-top:6px">Leyendo la bitácora desde Google Sheets</div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="tabs" id="tabs" style="display:none">
+    <div class="tab active" data-t="t1" onclick="showTab('t1',this)">1 · Matriz Tramo × Componente</div>
+    <div class="tab" data-t="t2" onclick="showTab('t2',this)">2 · Aprobados por Interventoría</div>
+    <div class="tab" data-t="t3" onclick="showTab('t3',this)">3 · Curva S</div>
+    <div class="tab" data-t="t4" onclick="showTab('t4',this)">4 · Costos del Proyecto</div>
+  </div>
+
+  <div class="panel" id="t1" style="display:none">
+    <h3 class="sec">Matriz Tramo × Componente — último movimiento registrado</h3>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--okbg);border:1px solid var(--ok)"></span><b>Aprobado</b> — habilita cobro</span>
+      <span><span class="dot" style="background:var(--revbg);border:1px solid var(--rev)"></span>En interventoría — entregado, sin respuesta</span>
+      <span><span class="dot" style="background:var(--obsbg);border:1px solid var(--obs)"></span>En consultoría</span>
+      <span><span class="dot" style="background:var(--penbg);border:1px solid var(--pen)"></span>No entregado</span>
+    </div>
+    <div style="overflow:auto;max-height:75vh"><table class="mtable" id="mtx"></table></div>
+    <div class="note">Cada celda muestra la <b>última entrega del consultor</b> y, debajo, la <b>última respuesta de la interventoría</b>. El estado no se digita en ninguna parte: el sistema filtra las filas de ese entregable, las ordena por fecha y lee la más reciente. Si esa fila es una entrega sin respuesta, el entregable está <b>en revisión</b>. Pase el cursor por una celda para ver el historial completo.</div>
+  </div>
+
+  <div class="panel" id="t2" style="display:none">
+    <h3 class="sec">Componentes aprobados por la interventoría — base para el cobro</h3>
+    <div style="overflow:auto;max-height:75vh"><table class="mtable" id="apr"></table></div>
+    <div class="note">✔ = concepto favorable de la interventoría. La aprobación es <b>terminal</b>: no hay un paso posterior de firma.</div>
+    <h3 class="sec" style="margin-top:22px">Valor cobrable a la fecha</h3>
+    <div style="overflow:auto"><table class="mtable" id="cobro" style="max-width:900px"></table></div>
+    <div class="note">Suma del valor de los componentes con concepto favorable. El aporte de un componente es el valor de su volumen dividido entre el número de componentes que lo integran.</div>
+    <h3 class="sec" style="margin-top:22px">Tiempo de respuesta de la interventoría</h3>
+    <div style="overflow:auto"><table class="mtable" id="ttbl" style="max-width:900px"></table></div>
+    <div class="note">Días calendario entre cada entrega del consultor y la respuesta de la interventoría. Se calcula automáticamente desde las fechas de la bitácora.</div>
+  </div>
+
+  <div class="panel" id="t3" style="display:none">
+    <h3 class="sec">Curva S — Programado vs Ejecutado vs Aprobado, ponderado por valor</h3>
+    <div class="kpis" style="grid-template-columns:repeat(5,1fr);margin:6px 0 14px" id="skpi"></div>
+    <label style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink2);margin-bottom:8px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="chkRad" onchange="pintarCurva()"> Mostrar la línea de <b>Radicado</b> (valor entregado a interventoría)
+    </label>
+    <div style="overflow-x:auto"><div id="scurve"></div></div>
+    <div class="legend" style="margin-top:10px">
+      <span><span class="dot" style="background:#94a3b8"></span><b>Programado</b> — curva contractual (28 cortes semanales)</span>
+      <span><span class="dot" style="background:#7c3aed"></span><b>Ejecutado</b> — avance físico, tomado del cronograma de Project</span>
+      <span><span class="dot" style="background:#2563eb"></span><b>Radicado</b> — valor entregado a interventoría</span>
+      <span><span class="dot" style="background:#16a34a"></span><b>Aprobado</b> — valor cobrable</span>
+      <span><span class="dot" style="background:#ef4444"></span>Hoy</span>
+    </div>
+    <div id="avisoCurva"></div>
+    <h3 class="sec" style="margin-top:18px">Avance por tramo (% del valor)</h3>
+    <div style="overflow:auto"><table class="mtable" id="stbl"></table></div>
+    <div class="note"><b>Ejecutado</b> se digita en la hoja CURVA_PROG copiándolo del cronograma de Project. <b>Radicado</b> y <b>Aprobado</b> los calcula el sistema desde la bitácora. El avance de un volumen con varios componentes se pondera <b>proporcionalmente</b>: el Volumen II aporta 1/5 por componente y el Volumen X, 1/2. Esto no reparte presupuesto — el valor de cada volumen sigue siendo una sola cifra.</div>
+  </div>
+
+  <div class="panel" id="t4" style="display:none">
+    <h3 class="sec">Costos del proyecto — presupuesto Lote 4</h3>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin:6px 0 14px" id="ckpi"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start">
+      <div><h3 class="sec" style="font-size:13.5px">Costo por tramo (sin IVA)</h3><div id="cbarT"></div></div>
+      <div><h3 class="sec" style="font-size:13.5px">Costo por volumen — todo el proyecto (sin IVA)</h3><div id="cbarV"></div></div>
+    </div>
+    <h3 class="sec" style="margin-top:20px">Matriz de costos: Volumen × Tramo (sin IVA, $ millones)</h3>
+    <div style="overflow:auto;max-height:70vh"><table class="mtable" id="ctbl"></table></div>
+    <div class="note">El <b>Volumen XIV (AVR)</b> aplica únicamente a Fusagasugá. El <b>Volumen XIII</b> (Informe Final) no tiene valor asignado en el presupuesto, por lo que no pondera en la curva S.</div>
+  </div>
+</div>
+<div class="gtip" id="gtip"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CONFIGURACIÓN — pegue aquí las 5 URLs publicadas del Google Sheet.
+   En el Sheet:  Archivo → Compartir → Publicar en la web
+                 elija la hoja, formato CSV, y copie el enlace.
+   ══════════════════════════════════════════════════════════════ */
+const HOJAS = {
+  BITACORA:    'PEGUE_AQUI_LA_URL_DE_BITACORA',
+  TRAMOS:      'PEGUE_AQUI_LA_URL_DE_TRAMOS',
+  ENTREGABLES: 'PEGUE_AQUI_LA_URL_DE_ENTREGABLES',
+  COSTOS:      'PEGUE_AQUI_LA_URL_DE_COSTOS',
+  CURVA_PROG:  'PEGUE_AQUI_LA_URL_DE_CURVA_PROG',
+};
+
+/* ── Lectura de CSV (respeta comillas y saltos de línea internos) ── */
+function parseCSV(txt){
+  const filas=[]; let f=[], campo='', comillas=false;
+  txt = txt.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(comillas){
+      if(ch==='"'){ if(txt[i+1]==='"'){ campo+='"'; i++; } else comillas=false; }
+      else campo+=ch;
+    } else if(ch==='"') comillas=true;
+    else if(ch===','){ f.push(campo); campo=''; }
+    else if(ch==='\n'){ f.push(campo); filas.push(f); f=[]; campo=''; }
+    else campo+=ch;
+  }
+  if(campo!==''||f.length){ f.push(campo); filas.push(f); }
+  return filas.map(r=>r.map(c=>c.trim()));
+}
+
+/* Busca la fila de encabezados y devuelve los registros como objetos */
+function tabla(filas, columnas){
+  let h=-1;
+  for(let i=0;i<Math.min(filas.length,15);i++){
+    const bajo=filas[i].map(c=>c.toLowerCase());
+    if(columnas.every(c=>bajo.includes(c))){ h=i; break; }
+  }
+  if(h<0) throw new Error('No se encontró la fila de encabezados. Se esperaban: '+columnas.join(', '));
+  const cab=filas[h].map(c=>c.toLowerCase());
+  return filas.slice(h+1).filter(r=>r.some(c=>c!=='')).map(r=>{
+    const o={}; cab.forEach((c,j)=>{ if(c) o[c]=r[j]!==undefined?r[j]:''; }); o._cols=r; return o;
+  });
+}
+
+/* Fechas: acepta AAAA-MM-DD y DD/MM/AAAA (formato colombiano) */
+function aFecha(s){
+  if(!s) return '';
+  s=String(s).trim();
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+  if(m){ let a=+m[3]; if(a<100) a+=2000; return `${a}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`; }
+  return '';
+}
+const aNum = s => { const v=parseFloat(String(s||'').replace(/[$\s.]/g,'').replace(',','.')); return isNaN(v)?0:v; };
+const aPct = s => { if(s===''||s==null) return null;
+  let t=String(s).trim(), p=t.includes('%'); let v=parseFloat(t.replace('%','').replace(',','.'));
+  return isNaN(v)?null:(p?v/100:v); };
+
+async function traer(nombre){
+  const url=HOJAS[nombre];
+  if(!url||url.startsWith('PEGUE_AQUI')) throw new Error(`Falta configurar la URL de la hoja ${nombre}.`);
+  const r=await fetch(url);
+  if(!r.ok) throw new Error(`No se pudo leer ${nombre} (código ${r.status}). Verifique que la hoja esté publicada.`);
+  const t=await r.text();
+  if(t.trimStart().startsWith('<')) throw new Error(`La URL de ${nombre} no devuelve CSV. Revise que haya elegido el formato CSV al publicar.`);
+  return parseCSV(t);
+}
+
+async function cargarDatos(){
+  const [bit,tra,ent,cos,cur]=await Promise.all(
+    ['BITACORA','TRAMOS','ENTREGABLES','COSTOS','CURVA_PROG'].map(traer));
+
+  const rt=tabla(tra,['tramo_id','clave','nombre']);
+  const TRAMOS=rt.slice(0,7).map(r=>({k:r['clave'],id:+r['tramo_id'],name:r['nombre']}));
+  const ID2K={}; TRAMOS.forEach(t=>ID2K[t.id]=t.k);
+
+  const re=tabla(ent,['tramo_id','componente','volumen']);
+  const COMPS=[], vistos=new Set();
+  re.forEach(r=>{ if(!vistos.has(r['componente'])){ vistos.add(r['componente']);
+    COMPS.push({c:r['componente'],v:r['volumen'],n:r['descripción']||r['descripcion']||''}); }});
+
+  const RESERVADAS=['subtotal','iva 19%','con iva',''];
+  const rc=tabla(cos,['volumen']);
+  const COSTO={}; TRAMOS.forEach(t=>COSTO[t.k]={});
+  const VOLS=[];
+  rc.forEach(r=>{
+    const v=r['volumen']; if(!v||RESERVADAS.includes(v.toLowerCase())) return;
+    VOLS.push(v);
+    TRAMOS.forEach((t,j)=>{ const x=aNum(r._cols[j+1]); if(x) COSTO[t.k][v]=x; });
+  });
+
+  const NCOMP={}; COMPS.forEach(c=>NCOMP[c.v]=(NCOMP[c.v]||0)+1);
+  const PESO={}; TRAMOS.forEach(t=>COMPS.forEach(c=>{
+    PESO[t.k+'|'+c.c]=(COSTO[t.k][c.v]||0)/NCOMP[c.v]; }));
+  const VOLDESC={}; COMPS.forEach(c=>{ (VOLDESC[c.v]=VOLDESC[c.v]||[]).push(c.n); });
+  Object.keys(VOLDESC).forEach(k=>VOLDESC[k]=VOLDESC[k].join(', '));
+
+  const EVS={}, avisos=[];
+  tabla(bit,['tramo_id','componente','evento','fecha']).forEach((r,i)=>{
+    const tid=+r['tramo_id'], comp=r['componente'], ev=(r['evento']||'').toUpperCase();
+    const f=aFecha(r['fecha']); let res=(r['resultado']||'').toUpperCase();
+    const n=i+2;
+    if(!ID2K[tid]){ avisos.push(`Fila ${n}: tramo "${r['tramo_id']}" no existe.`); return; }
+    if(!vistos.has(comp)){ avisos.push(`Fila ${n}: componente "${comp}" no existe.`); return; }
+    if(ev!=='ENTREGA'&&ev!=='RESPUESTA'){ avisos.push(`Fila ${n}: evento "${r['evento']}" no válido.`); return; }
+    if(!f){ avisos.push(`Fila ${n}: fecha vacía o ilegible ("${r['fecha']}").`); return; }
+    if(ev==='RESPUESTA'&&res!=='OBSERVACIONES'&&res!=='APROBACION'){
+      avisos.push(`Fila ${n}: respuesta sin resultado válido (${r['radicado']}). Se toma OBSERVACIONES.`);
+      res='OBSERVACIONES';
+    }
+    if(ev==='ENTREGA'&&res){ avisos.push(`Fila ${n}: una ENTREGA no lleva resultado.`); res=''; }
+    const k=ID2K[tid]+'|'+comp;
+    (EVS[k]=EVS[k]||[]).push({ev:ev,res:ev==='ENTREGA'?'':res,v:r['version']||'',
+                              r:r['radicado']||'',f:f,nota:r['nota']||''});
+  });
+  Object.keys(EVS).forEach(k=>EVS[k].sort((a,b)=>a.f<b.f?-1:1));
+
+  const CURVA=[];
+  tabla(cur,['fecha_corte']).forEach(r=>{
+    const f=aFecha(r['fecha_corte']); if(!f) return;
+    const cols=Object.keys(r).filter(x=>x.includes('programado')||x.includes('ejecutado'));
+    const p=aPct(r[cols.find(x=>x.includes('programado'))]),
+          e=aPct(r[cols.find(x=>x.includes('ejecutado'))]);
+    if(p!==null||e!==null) CURVA.push({f:f,p:p,e:e});
+  });
+
+  const hoy=new Date();
+  return {data:{
+    meta:{corte:hoy.toISOString().slice(0,10),
+          subtotal:TRAMOS.reduce((s,t)=>s+Object.values(COSTO[t.k]).reduce((a,b)=>a+b,0),0)},
+    tramos:TRAMOS, comps:COMPS, vols:VOLS, costo:COSTO, peso:PESO,
+    evs:EVS, curva:CURVA, voldesc:VOLDESC}, avisos:avisos};
+}
+
+function mostrarError(e){
+  document.getElementById('cargando').innerHTML=
+    `<div style="font-size:15px;font-weight:700;color:#b91c1c">No se pudieron cargar los datos</div>
+     <div style="font-size:13px;margin-top:8px;color:var(--ink2);max-width:620px;margin-left:auto;margin-right:auto">${e.message}</div>
+     <div style="font-size:12px;margin-top:14px;color:var(--muted)">
+       Revise que las 5 hojas estén publicadas en formato CSV y que las URLs del bloque
+       <b>HOJAS</b> estén completas.
+     </div>
+     <button onclick="recargar()" style="margin-top:16px;padding:8px 20px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:13px">Reintentar</button>`;
+}
+
+function recargar(){
+  document.getElementById('cargando').style.display='block';
+  document.getElementById('cargando').innerHTML=
+    '<div style="font-size:15px;font-weight:600;color:var(--brand)">Actualizando…</div>';
+  document.getElementById('tabs').style.display='none';
+  ['t1','t2','t3','t4'].forEach(t=>document.getElementById(t).style.display='none');
+  iniciar();
+}
+
+async function iniciar(){
+  try{
+    const {data,avisos}=await cargarDatos();
+    document.getElementById('cargando').style.display='none';
+    document.getElementById('tabs').style.display='flex';
+    document.getElementById('t1').style.display='block';
+    render(data);
+    if(avisos.length){
+      const d=document.createElement('div');
+      d.style.cssText='margin:12px 0;border-left:4px solid var(--obs);background:var(--obsbg);padding:10px 14px;border-radius:0 8px 8px 0;font-size:12.5px;color:#78350f';
+      d.innerHTML=`<b>${avisos.length} fila(s) con problemas en la bitácora:</b><ul style="margin:6px 0 0;padding-left:18px">`
+        +avisos.slice(0,8).map(a=>`<li>${a}</li>`).join('')
+        +(avisos.length>8?`<li>… y ${avisos.length-8} más</li>`:'')+'</ul>';
+      document.getElementById('kpis').insertAdjacentElement('beforebegin',d);
+    }
+  }catch(e){ mostrarError(e); console.error(e); }
+}
+
+function render(DATA){
+
+const {tramos:TRAMOS, comps:COMPS, vols:VOLS, costo:COSTO, peso:PESO, evs:EVS, meta:META, voldesc:VOLDESC} = DATA;
+
+const NOM = {A:'Aprobado', T:'En interventoría', C:'En consultoría', P:'No entregado'};
+const ORD = {ENTREGA:1, RESPUESTA:2};
+const fmt = s => { if(!s) return ''; const[y,m,d]=s.split('-'); return d+'/'+m+'/'+y.slice(2); };
+const fM  = v => '$ '+(v/1e6).toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1})+' M';
+const fF  = v => '$ '+Math.round(v).toLocaleString('es-CO');
+const D   = s => new Date(s+'T00:00:00');
+const _n  = new Date();
+const TODAY = _n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
+document.getElementById('hoyd').textContent = _n.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
+document.getElementById('corte').textContent = fmt(META.corte);
+window.pintarCurva=window.pintarCurva||function(){};
+
+function key(t,c){ return t+'|'+c; }
+function evsDe(t,c){ return EVS[key(t,c)] || []; }
+
+/* ── Estado derivado: manda el último movimiento ── */
+function estado(t,c){
+  const e = evsDe(t,c);
+  if(!e.length) return 'P';
+  const u = e.reduce((a,b)=> (b.f>a.f || (b.f===a.f && ORD[b.ev]>=ORD[a.ev])) ? b : a);
+  if(u.ev==='ENTREGA') return 'T';          // entregado y sin respuesta = en revisión
+  if(u.res==='APROBACION') return 'A';       // terminal: habilita el cobro
+  return 'C';                                // observaciones: vuelve al consultor
+}
+function ultEntrega(t,c){ const e=evsDe(t,c).filter(x=>x.ev==='ENTREGA'); return e.length?e[e.length-1]:null; }
+function ultResp(t,c){ const e=evsDe(t,c).filter(x=>x.ev==='RESPUESTA'); return e.length?e[e.length-1]:null; }
+function priEntrega(t,c){ const e=evsDe(t,c).filter(x=>x.ev==='ENTREGA'); return e.length?e[0]:null; }
+function aprob(t,c){ const e=evsDe(t,c).filter(x=>x.res==='APROBACION'); return e.length?e[e.length-1]:null; }
+
+/* ── KPIs ── */
+(function(){
+  const cnt={A:0,T:0,C:0,P:0}; let tot=0;
+  TRAMOS.forEach(t=>COMPS.forEach(c=>{ tot++; cnt[estado(t.k,c.c)]++; }));
+  const activos = tot-cnt.P;
+  const seg=[['A',cnt.A,'var(--ok)'],['T',cnt.T,'var(--rev)'],['C',cnt.C,'var(--obs)'],['P',cnt.P,'var(--pen)']];
+  document.getElementById('kpis').innerHTML=`
+   <div class="kpi big"><div class="n">${TRAMOS.length}</div><div class="t">Tramos del Lote 4</div></div>
+   <div class="kpi big"><div class="n">${COMPS.length}</div><div class="t">Componentes por tramo</div></div>
+   <div class="kpi ok"><div class="n">${cnt.A}</div><div class="t">Aprobados — cobrables</div></div>
+   <div class="kpi rev"><div class="n">${cnt.T}</div><div class="t">En interventoría</div></div>
+   <div class="kpi obs"><div class="n">${cnt.C}</div><div class="t">En consultoría</div></div>
+   <div class="kpi pen"><div class="n">${cnt.P}</div><div class="t">Sin iniciar (de ${tot})</div></div>
+   <div class="progressbar">
+     <b>Avance por número de entregables</b> — ${activos} de ${tot} con movimiento (${(activos/tot*100).toFixed(1)}%)
+     <div class="pb-track">${seg.map(([k,v,col])=>v?`<div class="pb-seg" style="width:${v/tot*100}%;background:${col}"></div>`:'').join('')}</div>
+     <div class="pb-lab">${seg.map(([k,v,col])=>`<span><span class="dot" style="background:${col}"></span>${NOM[k]}: <b>${v}</b></span>`).join('')}</div>
+   </div>`;
+})();
+
+/* Modo presentación: oculta la pestaña de Curva S para informes externos.
+   Se puede dejar activo por defecto abriendo el archivo con  ?presentacion=1  al final de la URL. */
+window.modoPresentacion=function(on){
+  const tab = document.querySelector('.tab[data-t="t3"]');
+  tab.style.display = on ? 'none' : '';
+  if(on && document.getElementById('t3').style.display !== 'none')
+    showTab('t1', document.querySelector('.tab[data-t="t1"]'));
+};
+window.showTab=function(id,el){
+  ['t1','t2','t3','t4'].forEach(t=>document.getElementById(t).style.display = t===id?'block':'none');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+};
+
+/* ── Tooltip con historial completo ── */
+const tip=document.getElementById('gtip');
+window.tipShow=function(ev,t,c){
+  const e=evsDe(t,c), tr=TRAMOS.find(x=>x.k===t), co=COMPS.find(x=>x.c===c);
+  let h=`<b>${tr.name}</b><br>Vol ${co.c} · ${co.n}<br><span style="color:#94a3b8">Estado: ${NOM[estado(t,c)]}</span>`;
+  if(e.length){
+    h+='<div style="margin-top:6px;border-top:1px solid #334155;padding-top:5px">';
+    e.forEach(x=>{ h+=`<div style="margin:2px 0"><b>${x.v}</b> ${fmt(x.f)} — ${x.r}${x.res&&x.res!=='OBSERVACIONES'?' <span style="color:#4ade80">'+x.res+'</span>':''}</div>`; });
+    h+='</div>';
+  } else h+='<div style="margin-top:6px;color:#94a3b8">Sin movimientos registrados</div>';
+  tip.innerHTML=h; tip.style.display='block'; tipMove(ev);
+};
+window.tipMove=function(ev){
+  const x=ev.clientX+16, y=ev.clientY+16, w=tip.offsetWidth, hh=tip.offsetHeight;
+  tip.style.left=Math.min(x,innerWidth-w-12)+'px';
+  tip.style.top=Math.min(y,innerHeight-hh-12)+'px';
+};
+window.tipHide=function(){ tip.style.display='none'; };
+
+if(new URLSearchParams(location.search).get('presentacion')==='1'){
+  document.getElementById('chkPres').checked = true;
+  modoPresentacion(true);
+}
+
+/* ══ TAB 1 · MATRIZ ══ */
+(function(){
+  let t='<thead><tr><th class="volcell" style="min-width:230px">Componente</th>';
+  TRAMOS.forEach(tr=>t+=`<th style="min-width:150px">${tr.name}<div style="font-weight:400;font-size:10px;opacity:.8">Tramo ${tr.id}</div></th>`);
+  t+='</tr></thead><tbody>';
+  COMPS.forEach(c=>{
+    t+=`<tr><td class="volcell"><span class="rom">${c.c}</span>${c.n}</td>`;
+    TRAMOS.forEach(tr=>{
+      const st=estado(tr.k,c.c), en=ultEntrega(tr.k,c.c), re=ultResp(tr.k,c.c);
+      let in_='';
+      if(en) in_+=`<div class="cv">${en.v}</div><div class="cf">${fmt(en.f)}</div><div class="cr">${en.r}</div>`;
+      else   in_+='<span style="color:var(--muted);font-size:11px">Sin entregar</span>';
+      if(re) in_+=`<div class="c2">${re.v} · ${fmt(re.f)}<br>${re.r}${re.res&&re.res!=='OBSERVACIONES'?'<br><b style="color:var(--ok)">'+re.res+'</b>':''}</div>`;
+      t+=`<td class="cell td-${st}" onmousemove="tipMove(event)" onmouseenter="tipShow(event,'${tr.k}','${c.c}')" onmouseleave="tipHide()">${in_}</td>`;
+    });
+    t+='</tr>';
+  });
+  t+='</tbody>';
+  document.getElementById('mtx').innerHTML=t;
+})();
+
+/* ══ TAB 2 · APROBADOS + TIEMPOS ══ */
+(function(){
+  let t='<thead><tr><th class="volcell" style="min-width:230px">Componente</th>';
+  TRAMOS.forEach(tr=>t+=`<th style="min-width:140px">${tr.name}</th>`);
+  t+='</tr></thead><tbody>';
+  COMPS.forEach(c=>{
+    t+=`<tr><td class="volcell"><span class="rom">${c.c}</span>${c.n}</td>`;
+    TRAMOS.forEach(tr=>{
+      const a=aprob(tr.k,c.c), st=estado(tr.k,c.c);
+      let in_;
+      if(a) in_=`<div style="text-align:center"><span class="est est-A">✔ APROBADO</span><div class="cf" style="margin-top:3px">${fmt(a.f)}</div><div class="cr">${a.r}</div></div>`;
+      else  in_=`<div style="text-align:center"><span class="est est-${st}">${NOM[st]}</span></div>`;
+      t+=`<td class="cell td-${st}">${in_}</td>`;
+    });
+    t+='</tr>';
+  });
+  document.getElementById('apr').innerHTML=t+'</tbody>';
+
+  // valor cobrable
+  let cb='<thead><tr><th class="volcell">Tramo</th><th>Componentes aprobados</th><th>Valor cobrable sin IVA</th><th>Con IVA</th><th>% del tramo</th></tr></thead><tbody>';
+  let ctot=0, cn=0;
+  TRAMOS.forEach(tr=>{
+    let v=0,n=0,tv=0;
+    COMPS.forEach(c=>{ const w=PESO[key(tr.k,c.c)]||0; tv+=w; if(aprob(tr.k,c.c)){ v+=w; n++; } });
+    ctot+=v; cn+=n;
+    cb+=`<tr><td class="volcell">${tr.name}</td><td style="text-align:center">${n}</td>
+      <td style="text-align:right;font-weight:700">${v?fF(v):'—'}</td>
+      <td style="text-align:right">${v?fF(v*1.19):'—'}</td>
+      <td style="text-align:center;color:var(--ok);font-weight:700">${tv?(v/tv*100).toFixed(1):'0.0'}%</td></tr>`;
+  });
+  const TOTP=Object.values(PESO).reduce((a,b)=>a+b,0);
+  cb+=`<tr style="font-weight:800"><td class="volcell" style="color:var(--ok)">TOTAL</td>
+    <td style="text-align:center">${cn}</td>
+    <td style="text-align:right;color:var(--ok)">${fF(ctot)}</td>
+    <td style="text-align:right;color:var(--ok)">${fF(ctot*1.19)}</td>
+    <td style="text-align:center;color:var(--ok)">${(ctot/TOTP*100).toFixed(1)}%</td></tr>`;
+  document.getElementById('cobro').innerHTML=cb+'</tbody>';
+
+  // tiempos de respuesta
+  const pares=[];
+  TRAMOS.forEach(tr=>COMPS.forEach(c=>{
+    const e=evsDe(tr.k,c.c);
+    for(let i=0;i<e.length-1;i++)
+      if(e[i].ev==='ENTREGA'&&e[i+1].ev==='RESPUESTA')
+        pares.push({t:tr.name,c:c.c,d:Math.round((D(e[i+1].f)-D(e[i].f))/86400000),f:e[i].f});
+  }));
+  const porT={};
+  pares.forEach(p=>{ (porT[p.t]=porT[p.t]||[]).push(p.d); });
+  let s='<thead><tr><th class="volcell">Tramo</th><th>Ciclos cerrados</th><th>Promedio (días)</th><th>Mínimo</th><th>Máximo</th></tr></thead><tbody>';
+  TRAMOS.forEach(tr=>{
+    const a=porT[tr.name]||[];
+    if(!a.length){ s+=`<tr><td class="volcell">${tr.name}</td><td colspan="4" style="text-align:center;color:var(--muted)">Sin ciclos cerrados</td></tr>`; return; }
+    const pr=a.reduce((x,y)=>x+y,0)/a.length;
+    s+=`<tr><td class="volcell">${tr.name}</td><td style="text-align:center">${a.length}</td>
+        <td style="text-align:center;font-weight:700;color:${pr>20?'var(--obs)':'var(--ok)'}">${pr.toFixed(1)}</td>
+        <td style="text-align:center">${Math.min(...a)}</td><td style="text-align:center">${Math.max(...a)}</td></tr>`;
+  });
+  const all=pares.map(p=>p.d);
+  if(all.length) s+=`<tr style="font-weight:800"><td class="volcell" style="color:var(--brand)">TOTAL PROYECTO</td>
+     <td style="text-align:center">${all.length}</td>
+     <td style="text-align:center;color:var(--brand)">${(all.reduce((x,y)=>x+y,0)/all.length).toFixed(1)}</td>
+     <td style="text-align:center">${Math.min(...all)}</td><td style="text-align:center">${Math.max(...all)}</td></tr>`;
+  document.getElementById('ttbl').innerHTML=s+'</tbody>';
+})();
+
+/* ══ TAB 3 · CURVA S ══ */
+(function(){
+  const TOT = Object.values(PESO).reduce((a,b)=>a+b,0);
+  function eventos(kind, tramo){
+    const ev=[];
+    TRAMOS.forEach(tr=>{ if(tramo&&tr.k!==tramo) return;
+      COMPS.forEach(c=>{
+        const w=PESO[key(tr.k,c.c)]||0; if(!w) return;
+        let d=null;
+        if(kind==='ejec'){ const e=priEntrega(tr.k,c.c); d=e&&e.f<=TODAY?e.f:null; }
+        else            { const a=aprob(tr.k,c.c);      d=a&&a.f<=TODAY?a.f:null; }
+        if(d) ev.push([d,w]);
+      });
+    });
+    return ev;
+  }
+  const EJ=eventos('ejec'), AP=eventos('apro');
+  const acc=(ev,cut,tot)=>{ let s=0; ev.forEach(([d,v])=>{ if(d<=cut) s+=v; }); return s/tot*100; };
+
+  const CUR=DATA.curva, INI=CUR[0].f, FIN=CUR[CUR.length-1].f;
+  const TP = TODAY<INI?INI:(TODAY>FIN?FIN:TODAY);
+  const fechas=[]; let cc=D(INI);
+  while(cc<=D(FIN)){ fechas.push(cc.toISOString().slice(0,10)); cc=new Date(+cc+7*86400000); }
+  if(!fechas.includes(TP)){ fechas.push(TP); fechas.sort(); }
+
+  function progEn(d){
+    let p=CUR[0].p;
+    for(const q of CUR){ if(q.f<=d) p=q.p; else break; }
+    return p*100;
+  }
+  const SERIE_E = DATA.curva.filter(q=>q.e!==null&&q.e!==undefined);
+  function ejecEn(d){ if(!SERIE_E.length) return null; let p=null;
+    for(const q of SERIE_E){ if(q.f<=d) p=q.e; else break; } return p===null?null:p*100; }
+  const pNow=progEn(TODAY), rNow=acc(EJ,TODAY,TOT), aNow=acc(AP,TODAY,TOT);
+  const ejecM=ejecEn(TODAY), dev=(ejecM===null?0:ejecM-pNow), eNow=rNow;
+  document.getElementById('skpi').innerHTML=`
+   <div class="kpi big"><div class="n">${fM(META.subtotal*1.19)}</div><div class="t">Valor del contrato con IVA — estudios ${fM(META.subtotal)} + IVA</div></div>
+   <div class="kpi"><div class="n" style="color:#64748b">${pNow.toFixed(1)}%</div><div class="t">Programado a la fecha</div></div>
+   <div class="kpi"><div class="n" style="color:#7c3aed">${ejecM!==null?ejecM.toFixed(1)+'%':'—'}</div><div class="t">Ejecutado (Project)${ejecM===null?' — pendiente de cargar':''}</div></div>
+   <div class="kpi ok"><div class="n">${aNow.toFixed(1)}%</div><div class="t">Aprobado — cobrable ${fM(TOT*aNow/100)} sin IVA</div></div>
+   <div class="kpi ${dev<0?'obs':'ok'}"><div class="n">${ejecM===null?'—':(dev>=0?'+':'')+dev.toFixed(1)+' pp'}</div><div class="t">Desviación (ejecutado − programado)</div></div>`;
+
+  const CW=1280,CH=430,ML=52,MR=120,MT=18,MB=44,PW=CW-ML-MR,PH=CH-MT-MB;
+  const x=d=>ML+(D(d)-D(INI))/(D(FIN)-D(INI))*PW, y=v=>MT+PH-(v/100)*PH;
+  let grid='';
+  for(let v=0;v<=100;v+=10) grid+=`<line x1="${ML}" y1="${y(v)}" x2="${ML+PW}" y2="${y(v)}" stroke="#e2e8f0"/><text x="${ML-8}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="#64748b">${v}%</text>`;
+  const mn=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  let mlab='', mm=new Date(D(INI).getFullYear(),D(INI).getMonth(),1);
+  while(mm<=D(FIN)){
+    const xd=x(mm.toISOString().slice(0,10));
+    if(xd>=ML){ grid+=`<line x1="${xd}" y1="${MT}" x2="${xd}" y2="${MT+PH}" stroke="#eef2f7"/>`;
+      mlab+=`<text x="${xd+3}" y="${MT+PH+16}" font-size="10" fill="#64748b">${mn[mm.getMonth()]} ${String(mm.getFullYear()).slice(2)}</text>`; }
+    mm=new Date(mm.getFullYear(),mm.getMonth()+1,1);
+  }
+  const path=(f,stop)=>{ let p=''; fechas.forEach(d=>{ if(stop&&d>TP) return; p+=(p?' L':'M')+x(d).toFixed(1)+' '+y(f(d)).toFixed(1); }); return p; };
+  const xt=x(TP);
+  const labsBase=[[pNow,'#64748b','Prog.'],[aNow,'#16a34a','Aprob.']]
+    .concat(ejecM!==null?[[ejecM,'#7c3aed','Ejec.']]:[]);
+  window.pintarCurva=function(){
+   const verRad=document.getElementById('chkRad').checked;
+   const labs=labsBase.concat(verRad?[[rNow,'#2563eb','Radic.']]:[]).sort((a,b)=>b[0]-a[0]);
+   let used=[], end='';
+   labs.forEach(([v,col,tx])=>{ let yy=y(v); while(used.some(u=>Math.abs(u-yy)<14)) yy+=14; used.push(yy);
+     end+=`<text x="${ML+PW+8}" y="${yy+4}" font-size="11" font-weight="700" fill="${col}">${tx} ${v.toFixed(1)}%</text>`; });
+   document.getElementById('scurve').innerHTML=`
+   <svg viewBox="0 0 ${CW} ${CH}" style="width:100%;min-width:900px;height:auto">
+    ${grid}${mlab}
+    <path d="${path(progEn,false)}" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 4"/>
+    ${SERIE_E.length?`<path d="${path(d=>{const q=ejecEn(d);return q===null?0:q;},true)}" fill="none" stroke="#7c3aed" stroke-width="2.5"/>`:''}
+    ${verRad?`<path d="${path(d=>acc(EJ,d,TOT),true)}" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 3"/>`:''}
+    <path d="${path(d=>acc(AP,d,TOT),true)}" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+    <line x1="${xt}" y1="${MT}" x2="${xt}" y2="${MT+PH}" stroke="#ef4444" stroke-width="2"/>
+    <text x="${xt+4}" y="${MT+11}" font-size="10" fill="#ef4444" font-weight="700">Hoy</text>
+    ${end}
+   </svg>`;
+  };
+  pintarCurva();
+
+  if(TODAY>FIN){
+    document.getElementById('avisoCurva').innerHTML=
+      `<div style="margin-top:12px;border-left:4px solid var(--obs);background:var(--obsbg);padding:10px 14px;border-radius:0 8px 8px 0;font-size:12.5px;color:#78350f">
+        <b>La línea base venció.</b> La curva programada termina el ${fmt(FIN)} en 100%, pero hoy es ${fmt(TODAY)}.
+        Mientras no se cargue una línea base vigente, el "Programado" se mantiene en 100% y la desviación
+        compara contra un cronograma ya cumplido. Si hubo prórroga, actualice la hoja CURVA_PROG.
+      </div>`;
+  }
+
+  let s='<thead><tr><th class="volcell">Tramo</th><th>Valor sin IVA</th><th>% del proyecto</th><th>Radicado</th><th>Aprobado</th></tr></thead><tbody>';
+  TRAMOS.forEach(tr=>{
+    let tv=0; COMPS.forEach(c=>tv+=PESO[key(tr.k,c.c)]||0);
+    const e=acc(eventos('ejec',tr.k),TODAY,tv), a=acc(eventos('apro',tr.k),TODAY,tv);
+    s+=`<tr><td class="volcell">${tr.name}</td><td style="text-align:right">${fF(tv)}</td>
+        <td style="text-align:center">${(tv/TOT*100).toFixed(1)}%</td>
+        <td style="text-align:center;font-weight:700;color:var(--rev)">${e.toFixed(1)}%</td>
+        <td style="text-align:center;font-weight:700;color:var(--ok)">${a.toFixed(1)}%</td></tr>`;
+  });
+  s+=`<tr style="font-weight:800"><td class="volcell" style="color:var(--brand)">TOTAL</td>
+      <td style="text-align:right;color:var(--brand)">${fF(TOT)}</td><td style="text-align:center">100%</td>
+      <td style="text-align:center;color:var(--rev)">${eNow.toFixed(1)}%</td>
+      <td style="text-align:center;color:var(--ok)">${aNow.toFixed(1)}%</td></tr>`;
+  document.getElementById('stbl').innerHTML=s+'</tbody>';
+})();
+
+/* ══ TAB 4 · COSTOS ══ */
+(function(){
+  const subT=TRAMOS.reduce((s,t)=>s+Object.values(COSTO[t.k]).reduce((a,b)=>a+b,0),0);
+  document.getElementById('ckpi').innerHTML=`
+   <div class="kpi big"><div class="n">${fM(subT)}</div><div class="t">Subtotal estudios (sin IVA)</div></div>
+   <div class="kpi"><div class="n" style="color:#64748b">${fM(subT*0.19)}</div><div class="t">IVA (19%)</div></div>
+   <div class="kpi ok"><div class="n">${fM(subT*1.19)}</div><div class="t">Valor del contrato (con IVA)</div></div>
+   <div class="kpi big"><div class="n">${TRAMOS.length} × ${VOLS.length-1}</div><div class="t">Tramos × volúmenes presupuestados</div></div>`;
+
+  const porT=TRAMOS.map(t=>[t.name,Object.values(COSTO[t.k]).reduce((a,b)=>a+b,0)]).sort((a,b)=>b[1]-a[1]);
+  const mT=Math.max(...porT.map(x=>x[1]));
+  document.getElementById('cbarT').innerHTML=porT.map(([n,v])=>
+    `<div class="cbar"><div class="cl">${n}</div><div class="ct"><div class="cf" style="width:${v/mT*100}%"></div></div><div class="cvv">${fM(v)}</div></div>`).join('');
+
+  const porV=VOLS.map(v=>[v,TRAMOS.reduce((s,t)=>s+(COSTO[t.k][v]||0),0)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]);
+  const mV=Math.max(...porV.map(x=>x[1]));
+  document.getElementById('cbarV').innerHTML=porV.map(([v,val])=>
+    `<div class="cbar"><div class="cl">Volumen ${v}</div><div class="ct"><div class="cf" style="width:${val/mV*100}%"></div></div><div class="cvv">${fM(val)}</div></div>`).join('');
+
+  let t='<thead><tr><th class="volcell" style="min-width:290px">Volumen</th>';
+  TRAMOS.forEach(tr=>t+=`<th>${tr.name}</th>`); t+='<th>TOTAL</th></tr></thead><tbody>';
+  const mx=Math.max(...VOLS.flatMap(v=>TRAMOS.map(t2=>COSTO[t2.k][v]||0)));
+  VOLS.forEach(v=>{
+    const tot=TRAMOS.reduce((s,t2)=>s+(COSTO[t2.k][v]||0),0);
+    t+=`<tr><td class="volcell" style="white-space:normal"><span class="rom">${v}</span><span class="vn" style="display:block;margin-top:1px">${VOLDESC[v]||''}</span></td>`;
+    TRAMOS.forEach(tr=>{
+      const val=COSTO[tr.k][v]||0;
+      t+=val
+        ? `<td style="text-align:right;background:rgba(59,130,246,${(val/mx*0.32).toFixed(3)});font-weight:600" title="${fF(val)}">${(val/1e6).toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1})}</td>`
+        : `<td style="text-align:center;color:var(--muted)">—</td>`;
+    });
+    t+=`<td style="text-align:right;font-weight:800">${tot?(tot/1e6).toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1}):'—'}</td></tr>`;
+  });
+  t+='</tbody><tfoot><tr><td class="volcell">Subtotal sin IVA</td>';
+  TRAMOS.forEach(tr=>{ const s=Object.values(COSTO[tr.k]).reduce((a,b)=>a+b,0);
+    t+=`<td style="text-align:right;font-weight:700" title="${fF(s)}">${(s/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})}</td>`; });
+  t+=`<td style="text-align:right;font-weight:800">${(subT/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})}</td></tr>`;
+  t+=`<tr style="font-size:13px"><td class="volcell" style="color:var(--brand)">VALOR CON IVA</td><td colspan="${TRAMOS.length}"></td>
+      <td style="text-align:right;color:var(--brand);font-weight:800">${(subT*1.19/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})}</td></tr></tfoot>`;
+  document.getElementById('ctbl').innerHTML=t;
+  })();
+
+}  /* fin de render */
+
+iniciar();
+</script>
+</body>
+</html>
