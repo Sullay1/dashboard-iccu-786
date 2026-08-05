@@ -157,11 +157,11 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
                  elija la hoja, formato CSV, y copie el enlace.
    ══════════════════════════════════════════════════════════════ */
 const HOJAS = {
-  BITACORA:    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXpUvuKUv8qh5_JOdJllZ_rDIah7jzWgOa9RWARhL_YXsT9GhLZJa4k2QWILEtLPjcaeZ90At3yjal/pub?gid=572763248&single=true&output=csv',
-  TRAMOS:      'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXpUvuKUv8qh5_JOdJllZ_rDIah7jzWgOa9RWARhL_YXsT9GhLZJa4k2QWILEtLPjcaeZ90At3yjal/pub?gid=30200937&single=true&output=csv',
-  ENTREGABLES: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXpUvuKUv8qh5_JOdJllZ_rDIah7jzWgOa9RWARhL_YXsT9GhLZJa4k2QWILEtLPjcaeZ90At3yjal/pub?gid=1470922663&single=true&output=csv',
-  COSTOS:      'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXpUvuKUv8qh5_JOdJllZ_rDIah7jzWgOa9RWARhL_YXsT9GhLZJa4k2QWILEtLPjcaeZ90At3yjal/pub?gid=1172538447&single=true&output=csv',
-  CURVA_PROG:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXpUvuKUv8qh5_JOdJllZ_rDIah7jzWgOa9RWARhL_YXsT9GhLZJa4k2QWILEtLPjcaeZ90At3yjal/pub?gid=801339400&single=true&output=csv',
+  BITACORA:    'PEGUE_AQUI_LA_URL_DE_BITACORA',
+  TRAMOS:      'PEGUE_AQUI_LA_URL_DE_TRAMOS',
+  ENTREGABLES: 'PEGUE_AQUI_LA_URL_DE_ENTREGABLES',
+  COSTOS:      'PEGUE_AQUI_LA_URL_DE_COSTOS',
+  CURVA_PROG:  'PEGUE_AQUI_LA_URL_DE_CURVA_PROG',
 };
 
 /* ── Lectura de CSV (respeta comillas y saltos de línea internos) ── */
@@ -206,10 +206,25 @@ function aFecha(s){
   if(m){ let a=+m[3]; if(a<100) a+=2000; return `${a}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`; }
   return '';
 }
-const aNum = s => { const v=parseFloat(String(s||'').replace(/[$\s.]/g,'').replace(',','.')); return isNaN(v)?0:v; };
+/* Números: acepta 36126043 · 36,126,043 · 36.126.043 · 36.126.043,50 · $ 36,126,043.50 */
+function aNum(s){
+  let t=String(s==null?'':s).replace(/[^\d,.\-]/g,'').trim();
+  if(!t) return 0;
+  const lc=t.lastIndexOf(','), lp=t.lastIndexOf('.');
+  if(lc>-1&&lp>-1){
+    // el separador que aparece de último es el decimal
+    t = lc>lp ? t.replace(/\./g,'').replace(',','.') : t.replace(/,/g,'');
+  } else if(lc>-1){
+    // solo comas: es decimal si hay una sola y deja 1 o 2 dígitos
+    t = (t.split(',').length===2 && t.length-lc-1<=2) ? t.replace(',','.') : t.replace(/,/g,'');
+  } else if(lp>-1){
+    t = (t.split('.').length===2 && t.length-lp-1<=2) ? t : t.replace(/\./g,'');
+  }
+  const v=parseFloat(t); return isNaN(v)?0:v;
+}
 const aPct = s => { if(s===''||s==null) return null;
-  let t=String(s).trim(), p=t.includes('%'); let v=parseFloat(t.replace('%','').replace(',','.'));
-  return isNaN(v)?null:(p?v/100:v); };
+  const p=String(s).includes('%'), v=aNum(s);
+  return (v===0&&!/\d/.test(String(s)))?null:(p?v/100:v); };
 
 async function traer(nombre){
   const url=HOJAS[nombre];
