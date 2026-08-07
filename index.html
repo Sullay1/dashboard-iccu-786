@@ -53,6 +53,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
 .est-A{background:var(--ok);color:#fff} .est-F{background:var(--fir);color:#fff}
 .est-T{background:var(--rev);color:#fff} .est-C{background:var(--obs);color:#fff}
 .est-P{background:var(--pen);color:#fff}
+.cond{display:inline-block;padding:2px 7px;border-radius:9px;font-size:9.5px;font-weight:800;
+      background:#f3e8ff;color:#6b21a8;border:1px solid #c084fc;letter-spacing:.2px;white-space:nowrap}
 .cbar{display:flex;align-items:center;gap:8px;margin:4px 0}
 .cbar .cl{flex:0 0 215px;font-size:12px;text-align:right;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cbar .ct{flex:1;height:18px;background:#f1f5f9;border-radius:5px;overflow:hidden}
@@ -101,13 +103,16 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
       <span><span class="dot" style="background:var(--penbg);border:1px solid var(--pen)"></span>No entregado</span>
     </div>
     <div style="overflow:auto;max-height:75vh"><table class="mtable" id="mtx"></table></div>
-    <div class="note">Cada celda muestra la <b>última entrega del consultor</b> y, debajo, la <b>última respuesta de la interventoría</b>. El estado no se digita en ninguna parte: el sistema filtra las filas de ese entregable, las ordena por fecha y lee la más reciente. Si esa fila es una entrega sin respuesta, el entregable está <b>en revisión</b>. Pase el cursor por una celda para ver el historial completo.</div>
+    <div class="note">Cada celda muestra la <b>última entrega del consultor</b> y, debajo, la <b>última respuesta de la interventoría</b>. El estado no se digita en ninguna parte: el sistema filtra las filas de ese entregable, las ordena por fecha y lee la más reciente. Si esa fila es una entrega sin respuesta, el entregable está <b>en revisión</b>. Pase el cursor por una celda para ver el historial completo.
+    <br><span class="cond">APROB. CONDICIONADA</span> señala los casos aprobados sujetos a ajustes, detectados por la palabra <b>condicionada</b> en la columna <code>nota</code> de la bitácora. No modifican el estado ni el valor cobrable.</div>
   </div>
 
   <div class="panel" id="t2" style="display:none">
     <h3 class="sec">Componentes aprobados por la interventoría — base para el cobro</h3>
     <div style="overflow:auto;max-height:75vh"><table class="mtable" id="apr"></table></div>
-    <div class="note">✔ = concepto favorable de la interventoría. La aprobación es <b>terminal</b>: no hay un paso posterior de firma.</div>
+    <div class="note">✔ = concepto favorable de la interventoría. La aprobación es <b>terminal</b>: no hay un paso posterior de firma.
+    Los componentes en interventoría muestran los días transcurridos desde la última entrega (naranja: más de 15 días · rojo: más de 30).
+    <b>(condicionada)</b> indica aprobación sujeta a ajustes: se muestra como aprobada pero <b>no suma al valor cobrable</b> hasta que se registre una <code>APROBACION</code> en la bitácora.</div>
     <h3 class="sec" style="margin-top:22px">Valor cobrable a la fecha</h3>
     <div style="overflow:auto"><table class="mtable" id="cobro" style="max-width:900px"></table></div>
     <div class="note">Suma del valor de los componentes con concepto favorable. El aporte de un componente es el valor de su volumen dividido entre el número de componentes que lo integran.</div>
@@ -129,11 +134,13 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
       <span><span class="dot" style="background:#2563eb"></span><b>Radicado</b> — valor entregado a interventoría</span>
       <span><span class="dot" style="background:#16a34a"></span><b>Aprobado</b> — valor cobrable</span>
       <span><span class="dot" style="background:#ef4444"></span>Hoy</span>
+      <span><span class="dot" style="background:#7c3aed"></span>Prórroga del contrato — 04/07/2026</span>
     </div>
     <div id="avisoCurva"></div>
     <h3 class="sec" style="margin-top:18px">Avance por tramo (% del valor)</h3>
     <div style="overflow:auto"><table class="mtable" id="stbl"></table></div>
-    <div class="note"><b>Ejecutado</b> se digita en la hoja CURVA_PROG copiándolo del cronograma de Project. <b>Radicado</b> y <b>Aprobado</b> los calcula el sistema desde la bitácora. El avance de un volumen con varios componentes se pondera <b>proporcionalmente</b>: el Volumen II aporta 1/5 por componente y el Volumen X, 1/2. Esto no reparte presupuesto — el valor de cada volumen sigue siendo una sola cifra.</div>
+    <div class="note">La <b>brecha por aprobar</b> es la diferencia entre lo radicado y lo aprobado: valor ya entregado a la interventoría que aún no tiene concepto favorable.
+    <b>Ejecutado</b> se digita en la hoja CURVA_PROG copiándolo del cronograma de Project. <b>Radicado</b> y <b>Aprobado</b> los calcula el sistema desde la bitácora. El avance de un volumen con varios componentes se pondera <b>proporcionalmente</b>: el Volumen II aporta 1/5 por componente y el Volumen X, 1/2. Esto no reparte presupuesto — el valor de cada volumen sigue siendo una sola cifra.</div>
   </div>
 
   <div class="panel" id="t4" style="display:none">
@@ -352,6 +359,8 @@ const fF  = v => '$ '+Math.round(v).toLocaleString('es-CO');
 const D   = s => new Date(s+'T00:00:00');
 const _n  = new Date();
 const TODAY = _n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
+/* Fecha de la prórroga del contrato. Para moverla, cambie solo esta línea. */
+const PRORROGA = '2026-07-04';
 document.getElementById('hoyd').textContent = _n.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
 document.getElementById('corte').textContent = fmt(META.corte);
 window.pintarCurva=window.pintarCurva||function(){};
@@ -373,6 +382,24 @@ function ultResp(t,c){ const e=evsDe(t,c).filter(x=>x.ev==='RESPUESTA'); return 
 function priEntrega(t,c){ const e=evsDe(t,c).filter(x=>x.ev==='ENTREGA'); return e.length?e[0]:null; }
 function aprob(t,c){ const e=evsDe(t,c).filter(x=>x.res==='APROBACION'); return e.length?e[e.length-1]:null; }
 
+/* Aprobación condicionada: se registra como OBSERVACIONES con la palabra
+   "condicionada" en la nota. No cambia el estado ni el valor cobrable;
+   solo se señala para que quede visible. */
+function esCondicionada(x){
+  return !!(x && x.nota && x.nota.toLowerCase().indexOf('condicionada') >= 0);
+}
+function condic(t,c){
+  const e = evsDe(t,c).filter(x => x.ev==='RESPUESTA' && esCondicionada(x));
+  return e.length ? e[e.length-1] : null;
+}
+/* Días que un entregable lleva en manos de la interventoría */
+function diasEnInterv(t,c){
+  if(estado(t,c) !== 'T') return null;
+  const en = ultEntrega(t,c);
+  if(!en) return null;
+  return Math.max(0, Math.round((D(TODAY) - D(en.f)) / 86400000));
+}
+
 /* ── KPIs ── */
 (function(){
   const cnt={A:0,T:0,C:0,P:0}; let tot=0;
@@ -385,7 +412,7 @@ function aprob(t,c){ const e=evsDe(t,c).filter(x=>x.res==='APROBACION'); return 
    <div class="kpi ok"><div class="n">${cnt.A}</div><div class="t">Aprobados — cobrables</div></div>
    <div class="kpi rev"><div class="n">${cnt.T}</div><div class="t">En interventoría</div></div>
    <div class="kpi obs"><div class="n">${cnt.C}</div><div class="t">En consultoría</div></div>
-   <div class="kpi pen"><div class="n">${cnt.P}</div><div class="t">Sin iniciar (de ${tot})</div></div>
+   <div class="kpi pen"><div class="n">${cnt.P}</div><div class="t">Sin entregar / en proceso (de ${tot})</div></div>
    <div class="progressbar">
      <b>Avance por número de entregables</b> — ${activos} de ${tot} con movimiento (${(activos/tot*100).toFixed(1)}%)
      <div class="pb-track">${seg.map(([k,v,col])=>v?`<div class="pb-seg" style="width:${v/tot*100}%;background:${col}"></div>`:'').join('')}</div>
@@ -412,6 +439,12 @@ const tip=document.getElementById('gtip');
 window.tipShow=function(ev,t,c){
   const e=evsDe(t,c), tr=TRAMOS.find(x=>x.k===t), co=COMPS.find(x=>x.c===c);
   let h=`<b>${tr.name}</b><br>Vol ${co.c} · ${co.n}<br><span style="color:#94a3b8">Estado: ${NOM[estado(t,c)]}</span>`;
+  const cd=condic(t,c);
+  if(cd) h+=`<div style="margin-top:6px;background:#6b21a8;color:#f3e8ff;padding:5px 8px;border-radius:6px;font-size:11.5px">
+    <b>Aprobación condicionada</b><br>${cd.r} · ${fmt(cd.f)}<br>
+    <span style="opacity:.85">Aprobado sujeto a ajustes. No cuenta como cobrable.</span></div>`;
+  const dd=diasEnInterv(t,c);
+  if(dd!==null) h+=`<div style="margin-top:6px;color:#93c5fd">Lleva <b>${dd} día${dd===1?'':'s'}</b> en interventoría</div>`;
   if(e.length){
     h+='<div style="margin-top:6px;border-top:1px solid #334155;padding-top:5px">';
     e.forEach(x=>{ h+=`<div style="margin:2px 0"><b>${x.v}</b> ${fmt(x.f)} — ${x.r}${x.res&&x.res!=='OBSERVACIONES'?' <span style="color:#4ade80">'+x.res+'</span>':''}</div>`; });
@@ -444,6 +477,7 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
       if(en) in_+=`<div class="cv">${en.v}</div><div class="cf">${fmt(en.f)}</div><div class="cr">${en.r}</div>`;
       else   in_+='<span style="color:var(--muted);font-size:11px">Sin entregar</span>';
       if(re) in_+=`<div class="c2">${re.v} · ${fmt(re.f)}<br>${re.r}${re.res&&re.res!=='OBSERVACIONES'?'<br><b style="color:var(--ok)">'+re.res+'</b>':''}</div>`;
+      if(condic(tr.k,c.c)) in_+='<div style="margin-top:4px"><span class="cond">APROB. CONDICIONADA</span></div>';
       t+=`<td class="cell td-${st}" onmousemove="tipMove(event)" onmouseenter="tipShow(event,'${tr.k}','${c.c}')" onmouseleave="tipHide()">${in_}</td>`;
     });
     t+='</tr>';
@@ -460,10 +494,19 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   COMPS.forEach(c=>{
     t+=`<tr><td class="volcell"><span class="rom">${c.c}</span>${c.n}</td>`;
     TRAMOS.forEach(tr=>{
-      const a=aprob(tr.k,c.c), st=estado(tr.k,c.c);
+      const a=aprob(tr.k,c.c), st=estado(tr.k,c.c), cd=condic(tr.k,c.c), dd=diasEnInterv(tr.k,c.c);
       let in_;
-      if(a) in_=`<div style="text-align:center"><span class="est est-A">✔ APROBADO</span><div class="cf" style="margin-top:3px">${fmt(a.f)}</div><div class="cr">${a.r}</div></div>`;
-      else  in_=`<div style="text-align:center"><span class="est est-${st}">${NOM[st]}</span></div>`;
+      if(a){
+        in_=`<div style="text-align:center"><span class="est est-A">✔ APROBADO</span><div class="cf" style="margin-top:3px">${fmt(a.f)}</div><div class="cr">${a.r}</div></div>`;
+      } else if(cd){
+        in_=`<div style="text-align:center"><span class="est est-A">✔ APROBADO</span>
+             <div class="cond" style="margin-top:3px">(condicionada)</div>
+             <div class="cf" style="margin-top:2px">${fmt(cd.f)}</div><div class="cr">${cd.r}</div></div>`;
+      } else {
+        in_=`<div style="text-align:center"><span class="est est-${st}">${NOM[st]}</span>`;
+        if(dd!==null) in_+=`<div style="margin-top:4px;font-size:11px;font-weight:700;color:${dd>30?'#b91c1c':dd>15?'#b45309':'var(--ink2)'}">${dd} día${dd===1?'':'s'} en interventoría</div>`;
+        in_+='</div>';
+      }
       t+=`<td class="cell td-${st}">${in_}</td>`;
     });
     t+='</tr>';
@@ -537,9 +580,12 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   const acc=(ev,cut,tot)=>{ let s=0; ev.forEach(([d,v])=>{ if(d<=cut) s+=v; }); return s/tot*100; };
 
   const CUR=DATA.curva, INI=CUR[0].f, FIN=CUR[CUR.length-1].f;
-  const TP = TODAY<INI?INI:(TODAY>FIN?FIN:TODAY);
+  /* El eje llega hasta la fecha más lejana entre el fin de la curva, hoy y la prórroga */
+  const FINX=[FIN,TODAY,PRORROGA].filter(Boolean).sort().pop();
+  const TP = TODAY<INI?INI:(TODAY>FINX?FINX:TODAY);
   const fechas=[]; let cc=D(INI);
-  while(cc<=D(FIN)){ fechas.push(cc.toISOString().slice(0,10)); cc=new Date(+cc+7*86400000); }
+  while(cc<=D(FINX)){ fechas.push(cc.toISOString().slice(0,10)); cc=new Date(+cc+7*86400000); }
+  if(fechas[fechas.length-1]!==FINX) fechas.push(FINX);
   if(!fechas.includes(TP)){ fechas.push(TP); fechas.sort(); }
 
   function progEn(d){
@@ -560,12 +606,12 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
    <div class="kpi ${dev<0?'obs':'ok'}"><div class="n">${ejecM===null?'—':(dev>=0?'+':'')+dev.toFixed(1)+' pp'}</div><div class="t">Desviación (ejecutado − programado)</div></div>`;
 
   const CW=1280,CH=430,ML=52,MR=120,MT=18,MB=44,PW=CW-ML-MR,PH=CH-MT-MB;
-  const x=d=>ML+(D(d)-D(INI))/(D(FIN)-D(INI))*PW, y=v=>MT+PH-(v/100)*PH;
+  const x=d=>ML+(D(d)-D(INI))/(D(FINX)-D(INI))*PW, y=v=>MT+PH-(v/100)*PH;
   let grid='';
   for(let v=0;v<=100;v+=10) grid+=`<line x1="${ML}" y1="${y(v)}" x2="${ML+PW}" y2="${y(v)}" stroke="#e2e8f0"/><text x="${ML-8}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="#64748b">${v}%</text>`;
   const mn=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   let mlab='', mm=new Date(D(INI).getFullYear(),D(INI).getMonth(),1);
-  while(mm<=D(FIN)){
+  while(mm<=D(FINX)){
     const xd=x(mm.toISOString().slice(0,10));
     if(xd>=ML){ grid+=`<line x1="${xd}" y1="${MT}" x2="${xd}" y2="${MT+PH}" stroke="#eef2f7"/>`;
       mlab+=`<text x="${xd+3}" y="${MT+PH+16}" font-size="10" fill="#64748b">${mn[mm.getMonth()]} ${String(mm.getFullYear()).slice(2)}</text>`; }
@@ -573,6 +619,7 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   }
   const path=(f,stop)=>{ let p=''; fechas.forEach(d=>{ if(stop&&d>TP) return; p+=(p?' L':'M')+x(d).toFixed(1)+' '+y(f(d)).toFixed(1); }); return p; };
   const xt=x(TP);
+  const xp=(PRORROGA>=INI&&PRORROGA<=FINX)?x(PRORROGA):null;
   const labsBase=[[pNow,'#64748b','Prog.'],[aNow,'#16a34a','Aprob.']]
     .concat(ejecM!==null?[[ejecM,'#7c3aed','Ejec.']]:[]);
   window.pintarCurva=function(){
@@ -588,6 +635,8 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
     ${SERIE_E.length?`<path d="${path(d=>{const q=ejecEn(d);return q===null?0:q;},true)}" fill="none" stroke="#7c3aed" stroke-width="2.5"/>`:''}
     ${verRad?`<path d="${path(d=>acc(EJ,d,TOT),true)}" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 3"/>`:''}
     <path d="${path(d=>acc(AP,d,TOT),true)}" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+    ${xp!==null?`<line x1="${xp}" y1="${MT}" x2="${xp}" y2="${MT+PH}" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="5 4"/>
+    <text x="${xp-4}" y="${MT+11}" font-size="10" fill="#7c3aed" font-weight="700" text-anchor="end">Prórroga</text>`:''}
     <line x1="${xt}" y1="${MT}" x2="${xt}" y2="${MT+PH}" stroke="#ef4444" stroke-width="2"/>
     <text x="${xt+4}" y="${MT+11}" font-size="10" fill="#ef4444" font-weight="700">Hoy</text>
     ${end}
@@ -604,19 +653,38 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
       </div>`;
   }
 
-  let s='<thead><tr><th class="volcell">Tramo</th><th>Valor sin IVA</th><th>% del proyecto</th><th>Radicado</th><th>Aprobado</th></tr></thead><tbody>';
+  let s=`<thead><tr>
+      <th class="volcell" rowspan="2">Tramo</th><th rowspan="2">Valor sin IVA</th><th rowspan="2">% del<br>proyecto</th>
+      <th colspan="2" style="background:#dbeafe;color:#1e40af">Radicado</th>
+      <th colspan="2" style="background:#dcfce7;color:#15803d">Aprobado</th>
+      <th colspan="2" style="background:#fef3c7;color:#92400e">Brecha por aprobar</th></tr>
+    <tr><th style="background:#eff6ff">%</th><th style="background:#eff6ff">$ sin IVA</th>
+        <th style="background:#f0fdf4">%</th><th style="background:#f0fdf4">$ sin IVA</th>
+        <th style="background:#fffbeb">$ sin IVA</th><th style="background:#fffbeb">$ con IVA</th></tr></thead><tbody>`;
+  let sumR=0, sumA=0;
   TRAMOS.forEach(tr=>{
     let tv=0; COMPS.forEach(c=>tv+=PESO[key(tr.k,c.c)]||0);
     const e=acc(eventos('ejec',tr.k),TODAY,tv), a=acc(eventos('apro',tr.k),TODAY,tv);
+    const $r=tv*e/100, $a=tv*a/100, $b=$r-$a;
+    sumR+=$r; sumA+=$a;
     s+=`<tr><td class="volcell">${tr.name}</td><td style="text-align:right">${fF(tv)}</td>
         <td style="text-align:center">${(tv/TOT*100).toFixed(1)}%</td>
         <td style="text-align:center;font-weight:700;color:var(--rev)">${e.toFixed(1)}%</td>
-        <td style="text-align:center;font-weight:700;color:var(--ok)">${a.toFixed(1)}%</td></tr>`;
+        <td style="text-align:right;color:var(--rev)">${$r?fF($r):'—'}</td>
+        <td style="text-align:center;font-weight:700;color:var(--ok)">${a.toFixed(1)}%</td>
+        <td style="text-align:right;color:var(--ok)">${$a?fF($a):'—'}</td>
+        <td style="text-align:right;font-weight:700;color:var(--obs)">${$b>0.5?fF($b):'—'}</td>
+        <td style="text-align:right;color:var(--obs)">${$b>0.5?fF($b*1.19):'—'}</td></tr>`;
   });
+  const $B=sumR-sumA;
   s+=`<tr style="font-weight:800"><td class="volcell" style="color:var(--brand)">TOTAL</td>
       <td style="text-align:right;color:var(--brand)">${fF(TOT)}</td><td style="text-align:center">100%</td>
       <td style="text-align:center;color:var(--rev)">${eNow.toFixed(1)}%</td>
-      <td style="text-align:center;color:var(--ok)">${aNow.toFixed(1)}%</td></tr>`;
+      <td style="text-align:right;color:var(--rev)">${fF(sumR)}</td>
+      <td style="text-align:center;color:var(--ok)">${aNow.toFixed(1)}%</td>
+      <td style="text-align:right;color:var(--ok)">${fF(sumA)}</td>
+      <td style="text-align:right;color:var(--obs)">${fF($B)}</td>
+      <td style="text-align:right;color:var(--obs)">${fF($B*1.19)}</td></tr>`;
   document.getElementById('stbl').innerHTML=s+'</tbody>';
 })();
 
