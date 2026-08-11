@@ -92,6 +92,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
     <div class="tab" data-t="t2" onclick="showTab('t2',this)">2 · Aprobados por Interventoría</div>
     <div class="tab" data-t="t3" onclick="showTab('t3',this)">3 · Curva S</div>
     <div class="tab" data-t="t4" onclick="showTab('t4',this)">4 · Costos del Proyecto</div>
+    <div class="tab" data-t="t5" onclick="showTab('t5',this)">5 · Resumen de Avance</div>
   </div>
 
   <div class="panel" id="t1" style="display:none">
@@ -124,12 +125,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
   <div class="panel" id="t3" style="display:none">
     <h3 class="sec">Curva S — Programado vs Ejecutado vs Aprobado, ponderado por valor</h3>
     <div class="kpis" style="grid-template-columns:repeat(5,1fr);margin:6px 0 14px" id="skpi"></div>
-    <label style="display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink2);margin-bottom:8px;cursor:pointer;user-select:none">
-      <input type="checkbox" id="chkRad" onchange="pintarCurva()"> Mostrar la línea de <b>Radicado</b> (valor entregado a interventoría)
-    </label>
     <div style="overflow-x:auto"><div id="scurve"></div></div>
     <div class="legend" style="margin-top:10px">
-      <span><span class="dot" style="background:#94a3b8"></span><b>Programado</b> — curva contractual (28 cortes semanales)</span>
+      <span><span class="dot" style="background:#334155"></span><b>Programado</b> — curva contractual (28 cortes semanales)</span>
       <span><span class="dot" style="background:#7c3aed"></span><b>Ejecutado</b> — avance físico, tomado del cronograma de Project</span>
       <span><span class="dot" style="background:#2563eb"></span><b>Radicado</b> — valor entregado a interventoría</span>
       <span><span class="dot" style="background:#16a34a"></span><b>Aprobado</b> — valor cobrable</span>
@@ -153,6 +151,24 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
     <h3 class="sec" style="margin-top:20px">Matriz de costos: Volumen × Tramo (sin IVA, $ millones)</h3>
     <div style="overflow:auto;max-height:70vh"><table class="mtable" id="ctbl"></table></div>
     <div class="note">El <b>Volumen XIV (AVR)</b> aplica únicamente a Fusagasugá. El <b>Volumen XIII</b> (Informe Final) no tiene valor asignado en el presupuesto, por lo que no pondera en la curva S.</div>
+  </div>
+
+  <div class="panel" id="t5" style="display:none">
+    <h3 class="sec">Avance por tramo y por volumen — Radicado</h3>
+    <div class="legend" id="legRad"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start">
+      <div><h3 class="sec" style="font-size:13.5px">Radicado por tramo</h3><div id="resRadTramo"></div></div>
+      <div><h3 class="sec" style="font-size:13.5px">Radicado por volumen — todo el proyecto</h3><div id="resRadVol"></div></div>
+    </div>
+    <div class="note">Radicado = valor de los entregables que el consultor ya <b>entregó</b> a la interventoría, tengan o no concepto favorable todavía. Mide cuánto ha salido por la puerta, no cuánto ya está aprobado.</div>
+
+    <h3 class="sec" style="margin-top:26px">Avance por tramo y por volumen — Aprobado</h3>
+    <div class="legend" id="legApr"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start">
+      <div><h3 class="sec" style="font-size:13.5px">Aprobado por tramo</h3><div id="resAprTramo"></div></div>
+      <div><h3 class="sec" style="font-size:13.5px">Aprobado por volumen — todo el proyecto</h3><div id="resAprVol"></div></div>
+    </div>
+    <div class="note">Aprobado = valor de los entregables con concepto favorable de la interventoría (habilita el cobro). Las aprobaciones condicionadas no suman aquí.</div>
   </div>
 </div>
 <div class="gtip" id="gtip"></div>
@@ -429,7 +445,7 @@ window.modoPresentacion=function(on){
     showTab('t1', document.querySelector('.tab[data-t="t1"]'));
 };
 window.showTab=function(id,el){
-  ['t1','t2','t3','t4'].forEach(t=>document.getElementById(t).style.display = t===id?'block':'none');
+  ['t1','t2','t3','t4','t5'].forEach(t=>document.getElementById(t).style.display = t===id?'block':'none');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
 };
@@ -499,12 +515,11 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
       if(a){
         in_=`<div style="text-align:center"><span class="est est-A">✔ APROBADO</span><div class="cf" style="margin-top:3px">${fmt(a.f)}</div><div class="cr">${a.r}</div></div>`;
       } else if(cd){
-        in_=`<div style="text-align:center"><span class="est est-A">✔ APROBADO</span>
-             <div class="cond" style="margin-top:3px">(condicionada)</div>
-             <div class="cf" style="margin-top:2px">${fmt(cd.f)}</div><div class="cr">${cd.r}</div></div>`;
+        in_=`<div style="text-align:center"><span class="cond">APROB. CONDICIONADA</span>
+             <div class="cf" style="margin-top:3px">${fmt(cd.f)}</div><div class="cr">${cd.r}</div></div>`;
       } else {
         in_=`<div style="text-align:center"><span class="est est-${st}">${NOM[st]}</span>`;
-        if(dd!==null) in_+=`<div style="margin-top:4px;font-size:11px;font-weight:700;color:${dd>30?'#b91c1c':dd>15?'#b45309':'var(--ink2)'}">${dd} día${dd===1?'':'s'} en interventoría</div>`;
+        if(dd!==null) in_+=`<div style="margin-top:4px;font-size:12px;font-weight:800;color:${dd>30?'#b91c1c':dd>15?'#b45309':'var(--ink2)'}">${dd}</div>`;
         in_+='</div>';
       }
       t+=`<td class="cell td-${st}">${in_}</td>`;
@@ -623,17 +638,16 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   const labsBase=[[pNow,'#64748b','Prog.'],[aNow,'#16a34a','Aprob.']]
     .concat(ejecM!==null?[[ejecM,'#7c3aed','Ejec.']]:[]);
   window.pintarCurva=function(){
-   const verRad=document.getElementById('chkRad').checked;
-   const labs=labsBase.concat(verRad?[[rNow,'#2563eb','Radic.']]:[]).sort((a,b)=>b[0]-a[0]);
+   const labs=labsBase.concat([[rNow,'#2563eb','Radic.']]).sort((a,b)=>b[0]-a[0]);
    let used=[], end='';
    labs.forEach(([v,col,tx])=>{ let yy=y(v); while(used.some(u=>Math.abs(u-yy)<14)) yy+=14; used.push(yy);
      end+=`<text x="${ML+PW+8}" y="${yy+4}" font-size="11" font-weight="700" fill="${col}">${tx} ${v.toFixed(1)}%</text>`; });
    document.getElementById('scurve').innerHTML=`
    <svg viewBox="0 0 ${CW} ${CH}" style="width:100%;min-width:900px;height:auto">
     ${grid}${mlab}
-    <path d="${path(progEn,false)}" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-dasharray="6 4"/>
+    <path d="${path(progEn,false)}" fill="none" stroke="#334155" stroke-width="2.5"/>
     ${SERIE_E.length?`<path d="${path(d=>{const q=ejecEn(d);return q===null?0:q;},true)}" fill="none" stroke="#7c3aed" stroke-width="2.5"/>`:''}
-    ${verRad?`<path d="${path(d=>acc(EJ,d,TOT),true)}" fill="none" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 3"/>`:''}
+    <path d="${path(d=>acc(EJ,d,TOT),true)}" fill="none" stroke="#2563eb" stroke-width="2"/>
     <path d="${path(d=>acc(AP,d,TOT),true)}" fill="none" stroke="#16a34a" stroke-width="2.5"/>
     ${xp!==null?`<line x1="${xp}" y1="${MT}" x2="${xp}" y2="${MT+PH}" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="5 4"/>
     <text x="${xp-4}" y="${MT+11}" font-size="10" fill="#7c3aed" font-weight="700" text-anchor="end">Prórroga</text>`:''}
@@ -729,6 +743,45 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
       <td style="text-align:right;color:var(--brand);font-weight:800">${(subT*1.19/1e6).toLocaleString('es-CO',{maximumFractionDigits:1})}</td></tr></tfoot>`;
   document.getElementById('ctbl').innerHTML=t;
   })();
+
+/* ══ TAB 5 · RESUMEN DE AVANCE (radicado y aprobado, por tramo y por volumen) ══ */
+(function(){
+  const UMBRALES=[[70,'#16a34a','En proceso — ≥70%'],[50,'#ca8a04','Regular — 50% a 70%'],
+                  [30,'#f97316','Atrasado — 30% a 50%'],[0,'#dc2626','Crítico — menos de 30%']];
+  const colorPct = p => UMBRALES.find(u=>p>=u[0])[1];
+  const leyenda = () => UMBRALES.map(([,col,tx])=>
+    `<span><span class="dot" style="background:${col}"></span>${tx}</span>`).join('');
+  document.getElementById('legRad').innerHTML = leyenda();
+  document.getElementById('legApr').innerHTML = leyenda();
+
+  function pctTramo(trk, fn){
+    let tv=0, rv=0;
+    COMPS.forEach(c=>{ const w=PESO[key(trk,c.c)]||0; if(!w) return; tv+=w;
+      const x=fn(trk,c.c); if(x && x.f<=TODAY) rv+=w; });
+    return tv ? rv/tv*100 : 0;
+  }
+  function pctVol(v, fn){
+    let tv=0, rv=0;
+    TRAMOS.forEach(tr=>COMPS.forEach(c=>{ if(c.v!==v) return;
+      const w=PESO[key(tr.k,c.c)]||0; if(!w) return; tv+=w;
+      const x=fn(tr.k,c.c); if(x && x.f<=TODAY) rv+=w; }));
+    return tv ? rv/tv*100 : 0;
+  }
+  function barra(label, pct){
+    return `<div class="cbar"><div class="cl">${label}</div><div class="ct">
+      <div class="cf" style="width:${pct.toFixed(1)}%;background:${colorPct(pct)}"></div></div>
+      <div class="cvv">${pct.toFixed(1)}%</div></div>`;
+  }
+  function pintar(elId, items){
+    document.getElementById(elId).innerHTML =
+      items.slice().sort((a,b)=>b[1]-a[1]).map(([label,pct])=>barra(label,pct)).join('');
+  }
+
+  pintar('resRadTramo', TRAMOS.map(tr=>[tr.name, pctTramo(tr.k, priEntrega)]));
+  pintar('resRadVol',   VOLS.filter(v=>Object.values(COSTO).some(c=>c[v])).map(v=>[`Volumen ${v}`, pctVol(v, priEntrega)]));
+  pintar('resAprTramo', TRAMOS.map(tr=>[tr.name, pctTramo(tr.k, aprob)]));
+  pintar('resAprVol',   VOLS.filter(v=>Object.values(COSTO).some(c=>c[v])).map(v=>[`Volumen ${v}`, pctVol(v, aprob)]));
+})();
 
 }  /* fin de render */
 
