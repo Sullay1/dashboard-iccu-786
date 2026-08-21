@@ -306,7 +306,10 @@ async function cargarDatos(){
     (EVS[k]=EVS[k]||[]).push({ev:ev,res:ev==='ENTREGA'?'':res,v:r['version']||'',
                               r:r['radicado']||'',f:f,nota:r['nota']||''});
   });
-  Object.keys(EVS).forEach(k=>EVS[k].sort((a,b)=>a.f<b.f?-1:1));
+  /* Orden estable: en empate de fecha, respeta el orden de las filas de la
+     bitácora (solo se agregan filas, nunca se editan ni se reordenan, así
+     que el orden de la hoja SÍ refleja el orden real de los hechos). */
+  Object.keys(EVS).forEach(k=>EVS[k].sort((a,b)=>a.f<b.f?-1:(a.f>b.f?1:0)));
 
   const CURVA=[];
   tabla(cur,['fecha_corte']).forEach(r=>{
@@ -368,7 +371,6 @@ function render(DATA){
 const {tramos:TRAMOS, comps:COMPS, vols:VOLS, costo:COSTO, peso:PESO, evs:EVS, meta:META, voldesc:VOLDESC} = DATA;
 
 const NOM = {A:'Aprobado', T:'En interventoría', C:'En consultoría', P:'No entregado'};
-const ORD = {ENTREGA:1, RESPUESTA:2};
 const fmt = s => { if(!s) return ''; const[y,m,d]=s.split('-'); return d+'/'+m+'/'+y.slice(2); };
 const fM  = v => '$ '+(v/1e6).toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1})+' M';
 const fF  = v => '$ '+Math.round(v).toLocaleString('es-CO');
@@ -384,11 +386,12 @@ window.pintarCurva=window.pintarCurva||function(){};
 function key(t,c){ return t+'|'+c; }
 function evsDe(t,c){ return EVS[key(t,c)] || []; }
 
-/* ── Estado derivado: manda el último movimiento ── */
+/* ── Estado derivado: manda el último movimiento (por fecha; en empate,
+   por el orden real de las filas de la bitácora) ── */
 function estado(t,c){
   const e = evsDe(t,c);
   if(!e.length) return 'P';
-  const u = e.reduce((a,b)=> (b.f>a.f || (b.f===a.f && ORD[b.ev]>=ORD[a.ev])) ? b : a);
+  const u = e[e.length-1];
   if(u.ev==='ENTREGA') return 'T';          // entregado y sin respuesta = en revisión
   if(u.res==='APROBACION') return 'A';       // terminal: habilita el cobro
   return 'C';                                // observaciones: vuelve al consultor
