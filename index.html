@@ -408,8 +408,14 @@ function esCondicionada(x){
   return !!(x && x.nota && x.nota.toLowerCase().indexOf('condicionada') >= 0);
 }
 function condic(t,c){
-  const e = evsDe(t,c).filter(x => x.ev==='RESPUESTA' && esCondicionada(x));
-  return e.length ? e[e.length-1] : null;
+  /* Solo cuenta como condicionada VIGENTE si, entre las respuestas
+     relevantes (aprobación plena o condicionada), la última es la
+     condicionada. Si después llegó una aprobación plena, queda
+     superada y deja de mostrarse — sin tocar filas en la bitácora. */
+  const e = evsDe(t,c).filter(x => x.ev==='RESPUESTA' && (x.res==='APROBACION' || esCondicionada(x)));
+  if(!e.length) return null;
+  const u = e[e.length-1];
+  return esCondicionada(u) ? u : null;
 }
 /* Días que un entregable lleva en manos de la interventoría */
 function diasEnInterv(t,c){
