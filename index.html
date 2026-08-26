@@ -107,7 +107,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
     <div style="overflow:auto;max-height:75vh"><table class="mtable" id="mtx"></table></div>
     <div class="note">Cada celda muestra la <b>última entrega del consultor</b> y, debajo, la <b>última respuesta de la interventoría</b>. El estado no se digita en ninguna parte: el sistema filtra las filas de ese entregable, las ordena por fecha y lee la más reciente. Si esa fila es una entrega sin respuesta, el entregable está <b>en revisión</b>. Pase el cursor por una celda para ver el historial completo.
     <br><span class="cond">APROB. CONDICIONADA</span> señala los casos aprobados sujetos a ajustes, detectados por la palabra <b>condicionada</b> en la columna <code>nota</code> de la bitácora. No modifican el estado ni el valor cobrable.
-    <br>Las celdas <b>No aplica</b> (ej. Volumen XIV · AVR fuera de Fusagasugá) son tramo×componente sin presupuesto asignado en la hoja COSTOS. Se excluyen de todos los conteos y porcentajes del tablero.</div>
+    <br>Las celdas <b>No aplica</b> (ej. Volumen XIV · AVR fuera de Fusagasugá) son tramo×componente que no existen como fila en la hoja ENTREGABLES. Se excluyen de todos los conteos y porcentajes del tablero.</div>
   </div>
 
   <div class="panel" id="t2" style="display:none">
@@ -274,6 +274,12 @@ async function cargarDatos(){
   re.forEach(r=>{ if(!vistos.has(r['componente'])){ vistos.add(r['componente']);
     COMPS.push({c:r['componente'],v:r['volumen'],n:r['descripción']||r['descripcion']||''}); }});
 
+  /* Combinaciones tramo×componente que REALMENTE aplican, según las filas
+     de ENTREGABLES (no según el presupuesto: hay volúmenes, como el XIII,
+     que aplican a todos los tramos pero no tienen valor asignado). */
+  const APLICA = new Set();
+  re.forEach(r=>{ const k=ID2K[+r['tramo_id']]; if(k) APLICA.add(k+'|'+r['componente']); });
+
   const RESERVADAS=['subtotal','iva 19%','con iva',''];
   const rc=tabla(cos,['volumen']);
   const COSTO={}; TRAMOS.forEach(t=>COSTO[t.k]={});
@@ -326,7 +332,7 @@ async function cargarDatos(){
   return {data:{
     meta:{corte:hoy.toISOString().slice(0,10),
           subtotal:TRAMOS.reduce((s,t)=>s+Object.values(COSTO[t.k]).reduce((a,b)=>a+b,0),0)},
-    tramos:TRAMOS, comps:COMPS, vols:VOLS, costo:COSTO, peso:PESO,
+    tramos:TRAMOS, comps:COMPS, vols:VOLS, costo:COSTO, peso:PESO, aplica:APLICA,
     evs:EVS, curva:CURVA, voldesc:VOLDESC}, avisos:avisos};
 }
 
@@ -370,7 +376,7 @@ async function iniciar(){
 
 function render(DATA){
 
-const {tramos:TRAMOS, comps:COMPS, vols:VOLS, costo:COSTO, peso:PESO, evs:EVS, meta:META, voldesc:VOLDESC} = DATA;
+const {tramos:TRAMOS, comps:COMPS, vols:VOLS, costo:COSTO, peso:PESO, aplica:APLICA, evs:EVS, meta:META, voldesc:VOLDESC} = DATA;
 
 const NOM = {A:'Aprobado', T:'En interventoría', C:'En consultoría', P:'No entregado'};
 const fmt = s => { if(!s) return ''; const[y,m,d]=s.split('-'); return d+'/'+m+'/'+y.slice(2); };
@@ -427,9 +433,10 @@ function diasEnInterv(t,c){
   return Math.max(0, Math.round((D(TODAY) - D(en.f)) / 86400000));
 }
 
-/* Un tramo×componente "aplica" si tiene presupuesto asignado (PESO>0).
-   El Volumen XIV (AVR), por ejemplo, solo aplica a Fusagasugá. */
-function aplica(t,c){ return !!(PESO[key(t,c)]); }
+/* Un tramo×componente "aplica" si existe como fila en la hoja ENTREGABLES.
+   No se usa el presupuesto para esto: hay volúmenes (ej. XIII) que aplican
+   a todos los tramos pero no tienen valor asignado en COSTOS. */
+function aplica(t,c){ return APLICA.has(t+'|'+c); }
 
 /* ── KPIs ── */
 (function(){
