@@ -48,7 +48,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
 .cell .cr{font-size:10.5px;color:var(--muted);word-break:break-all}
 .cell .c2{font-size:10px;color:var(--muted);border-top:1px dashed #cbd5e1;margin-top:4px;padding-top:3px}
 .td-A{background:var(--okbg)} .td-F{background:var(--firbg)} .td-T{background:var(--revbg)}
-.td-C{background:var(--obsbg)} .td-P{background:var(--penbg)}
+.td-C{background:var(--obsbg)} .td-P{background:var(--penbg)} .td-N{background:#fee2e2}
 .est{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
 .est-A{background:var(--ok);color:#fff} .est-F{background:var(--fir);color:#fff}
 .est-T{background:var(--rev);color:#fff} .est-C{background:var(--obs);color:#fff}
@@ -102,10 +102,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
       <span><span class="dot" style="background:var(--revbg);border:1px solid var(--rev)"></span>En interventoría — entregado, sin respuesta</span>
       <span><span class="dot" style="background:var(--obsbg);border:1px solid var(--obs)"></span>En consultoría</span>
       <span><span class="dot" style="background:var(--penbg);border:1px solid var(--pen)"></span>No entregado</span>
+      <span><span class="dot" style="background:#fee2e2;border:1px solid #dc2626"></span>No aplica — sin presupuesto asignado</span>
     </div>
     <div style="overflow:auto;max-height:75vh"><table class="mtable" id="mtx"></table></div>
     <div class="note">Cada celda muestra la <b>última entrega del consultor</b> y, debajo, la <b>última respuesta de la interventoría</b>. El estado no se digita en ninguna parte: el sistema filtra las filas de ese entregable, las ordena por fecha y lee la más reciente. Si esa fila es una entrega sin respuesta, el entregable está <b>en revisión</b>. Pase el cursor por una celda para ver el historial completo.
-    <br><span class="cond">APROB. CONDICIONADA</span> señala los casos aprobados sujetos a ajustes, detectados por la palabra <b>condicionada</b> en la columna <code>nota</code> de la bitácora. No modifican el estado ni el valor cobrable.</div>
+    <br><span class="cond">APROB. CONDICIONADA</span> señala los casos aprobados sujetos a ajustes, detectados por la palabra <b>condicionada</b> en la columna <code>nota</code> de la bitácora. No modifican el estado ni el valor cobrable.
+    <br>Las celdas <b>No aplica</b> (ej. Volumen XIV · AVR fuera de Fusagasugá) son tramo×componente sin presupuesto asignado en la hoja COSTOS. Se excluyen de todos los conteos y porcentajes del tablero.</div>
   </div>
 
   <div class="panel" id="t2" style="display:none">
@@ -425,10 +427,14 @@ function diasEnInterv(t,c){
   return Math.max(0, Math.round((D(TODAY) - D(en.f)) / 86400000));
 }
 
+/* Un tramo×componente "aplica" si tiene presupuesto asignado (PESO>0).
+   El Volumen XIV (AVR), por ejemplo, solo aplica a Fusagasugá. */
+function aplica(t,c){ return !!(PESO[key(t,c)]); }
+
 /* ── KPIs ── */
 (function(){
   const cnt={A:0,T:0,C:0,P:0}; let tot=0;
-  TRAMOS.forEach(t=>COMPS.forEach(c=>{ tot++; cnt[estado(t.k,c.c)]++; }));
+  TRAMOS.forEach(t=>COMPS.forEach(c=>{ if(!aplica(t.k,c.c)) return; tot++; cnt[estado(t.k,c.c)]++; }));
   const activos = tot-cnt.P;
   const seg=[['A',cnt.A,'var(--ok)'],['T',cnt.T,'var(--rev)'],['C',cnt.C,'var(--obs)'],['P',cnt.P,'var(--pen)']];
   document.getElementById('kpis').innerHTML=`
@@ -497,6 +503,10 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   COMPS.forEach(c=>{
     t+=`<tr><td class="volcell"><span class="rom">${c.c}</span>${c.n}</td>`;
     TRAMOS.forEach(tr=>{
+      if(!aplica(tr.k,c.c)){
+        t+=`<td class="cell td-N"><span style="color:#dc2626;font-size:11px;font-weight:700">No aplica</span></td>`;
+        return;
+      }
       const st=estado(tr.k,c.c), en=ultEntrega(tr.k,c.c), re=ultResp(tr.k,c.c);
       let in_='';
       if(en) in_+=`<div class="cv">${en.v}</div><div class="cf">${fmt(en.f)}</div><div class="cr">${en.r}</div>`;
@@ -519,6 +529,10 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   COMPS.forEach(c=>{
     t+=`<tr><td class="volcell"><span class="rom">${c.c}</span>${c.n}</td>`;
     TRAMOS.forEach(tr=>{
+      if(!aplica(tr.k,c.c)){
+        t+=`<td class="cell td-N"><span style="color:#dc2626;font-size:11px;font-weight:700">No aplica</span></td>`;
+        return;
+      }
       const a=aprob(tr.k,c.c), st=estado(tr.k,c.c), cd=condic(tr.k,c.c), dd=diasEnInterv(tr.k,c.c);
       let in_;
       if(a){
@@ -542,7 +556,7 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   let ctot=0, cn=0;
   TRAMOS.forEach(tr=>{
     let v=0,n=0,tv=0;
-    COMPS.forEach(c=>{ const w=PESO[key(tr.k,c.c)]||0; tv+=w; if(aprob(tr.k,c.c)){ v+=w; n++; } });
+    COMPS.forEach(c=>{ const w=PESO[key(tr.k,c.c)]||0; if(!w) return; tv+=w; if(aprob(tr.k,c.c)){ v+=w; n++; } });
     ctot+=v; cn+=n;
     cb+=`<tr><td class="volcell">${tr.name}</td><td style="text-align:center">${n}</td>
       <td style="text-align:right;font-weight:700">${v?fF(v):'—'}</td>
