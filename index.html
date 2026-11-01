@@ -137,7 +137,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
     <h3 class="sec" style="margin-top:18px">Avance por tramo (% del valor)</h3>
     <div style="overflow:auto"><table class="mtable" id="stbl"></table></div>
     <div class="note">La <b>brecha por aprobar</b> es la diferencia entre lo radicado y lo aprobado: valor ya entregado a la interventoría que aún no tiene concepto favorable.
-    <b>Ejecutado</b> se digita en la hoja CURVA_PROG copiándolo del cronograma de Project. <b>Radicado</b> y <b>Aprobado</b> los calcula el sistema desde la bitácora. El avance de un volumen con varios componentes se pondera <b>proporcionalmente</b>: el Volumen II aporta 1/5 por componente y el Volumen X, 1/2. Esto no reparte presupuesto — el valor de cada volumen sigue siendo una sola cifra.</div>
+    <b>Ejecutado</b> se digita en la hoja CURVA_PROG copiándolo del cronograma de Project. <b>Radicado</b> y <b>Aprobado</b> los calcula el sistema desde la bitácora. El <b>Radicado</b> pondera un volumen con varios componentes <b>proporcionalmente</b>: el Volumen II aporta 1/5 por componente y el Volumen X, 1/2. El <b>Aprobado</b> es el valor cobrable: un volumen solo suma, por tramo, cuando todos sus componentes tienen aprobación plena (el II con sus 5 componentes y el X con sus 2).</div>
   </div>
 
   <div class="panel" id="t4" style="display:none">
@@ -167,7 +167,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
       <div><h3 class="sec" style="font-size:13.5px">Aprobado por tramo</h3><div id="resAprTramo"></div></div>
       <div><h3 class="sec" style="font-size:13.5px">Aprobado por volumen — todo el proyecto</h3><div id="resAprVol"></div></div>
     </div>
-    <div class="note">Aprobado = valor de los entregables con concepto favorable de la interventoría (habilita el cobro). Las aprobaciones condicionadas no suman aquí.</div>
+    <div class="note">Aprobado = valor cobrable: volúmenes con concepto favorable de la interventoría en todos sus componentes. Los volúmenes II y X solo suman en un tramo cuando están completos. Las aprobaciones condicionadas no suman aquí.</div>
   </div>
 
   <div class="panel" id="t6" style="display:none">
@@ -471,7 +471,7 @@ function volCobrable(trk, v){
   document.getElementById('kpis').innerHTML=`
    <div class="kpi big"><div class="n">${TRAMOS.length}</div><div class="t">Tramos del Lote 4</div></div>
    <div class="kpi big"><div class="n">${COMPS.length}</div><div class="t">Componentes por tramo</div></div>
-   <div class="kpi ok"><div class="n">${cnt.A}</div><div class="t">Aprobados — cobrables</div></div>
+   <div class="kpi ok"><div class="n">${cnt.A}</div><div class="t">Aprobados por interventoría</div></div>
    <div class="kpi rev"><div class="n">${cnt.T}</div><div class="t">En interventoría</div></div>
    <div class="kpi obs"><div class="n">${cnt.C}</div><div class="t">En consultoría</div></div>
    <div class="kpi pen"><div class="n">${cnt.P}</div><div class="t">Sin entregar / en proceso (de ${tot})</div></div>
@@ -636,11 +636,21 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   function eventos(kind, tramo){
     const ev=[];
     TRAMOS.forEach(tr=>{ if(tramo&&tr.k!==tramo) return;
+      if(kind==='apro'){
+        /* Aprobado = valor cobrable: un volumen suma, por tramo, solo cuando TODOS
+           sus componentes tienen aprobación plena, y cuenta en la fecha de la última. */
+        VOLS.forEach(v=>{
+          const w=COSTO[tr.k][v]||0; if(!w) return;
+          const cs=COMPS.filter(c=>c.v===v && aplica(tr.k,c.c)); if(!cs.length) return;
+          const aps=cs.map(c=>aprob(tr.k,c.c)); if(aps.some(a=>!a)) return;
+          const d=aps.map(a=>a.f).sort().pop();
+          if(d<=TODAY) ev.push([d,w]);
+        });
+        return;
+      }
       COMPS.forEach(c=>{
         const w=PESO[key(tr.k,c.c)]||0; if(!w) return;
-        let d=null;
-        if(kind==='ejec'){ const e=priEntrega(tr.k,c.c); d=e&&e.f<=TODAY?e.f:null; }
-        else            { const a=aprob(tr.k,c.c);      d=a&&a.f<=TODAY?a.f:null; }
+        const e=priEntrega(tr.k,c.c), d=e&&e.f<=TODAY?e.f:null;
         if(d) ev.push([d,w]);
       });
     });
@@ -834,8 +844,15 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
 
   pintar('resRadTramo', TRAMOS.map(tr=>[tr.name, pctTramo(tr.k, priEntrega)]));
   pintar('resRadVol',   VOLS.filter(v=>Object.values(COSTO).some(c=>c[v])).map(v=>[`Volumen ${v}`, pctVol(v, priEntrega)]));
-  pintar('resAprTramo', TRAMOS.map(tr=>[tr.name, pctTramo(tr.k, aprob)]));
-  pintar('resAprVol',   VOLS.filter(v=>Object.values(COSTO).some(c=>c[v])).map(v=>[`Volumen ${v}`, pctVol(v, aprob)]));
+  /* Aprobado = valor cobrable: volumen completo con aprobación plena */
+  function pctCobTramo(trk){ let tv=0, rv=0;
+    VOLS.forEach(v=>{ const x=volCobrable(trk,v); tv+=x.valor; if(x.ok) rv+=x.valor; });
+    return tv ? rv/tv*100 : 0; }
+  function pctCobVol(v){ let tv=0, rv=0;
+    TRAMOS.forEach(tr=>{ const x=volCobrable(tr.k,v); tv+=x.valor; if(x.ok) rv+=x.valor; });
+    return tv ? rv/tv*100 : 0; }
+  pintar('resAprTramo', TRAMOS.map(tr=>[tr.name, pctCobTramo(tr.k)]));
+  pintar('resAprVol',   VOLS.filter(v=>Object.values(COSTO).some(c=>c[v])).map(v=>[`Volumen ${v}`, pctCobVol(v)]));
 })();
 
 /* ══ TAB 6 · COBROS ══ */
