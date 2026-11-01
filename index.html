@@ -73,10 +73,6 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
       <div class="sub">Consultor PROBINTEC SAS · Interventoría TERRA PROYECTOS CIVILES · 7 tramos · 19 componentes por tramo · estado deducido del último oficio</div>
     </div>
     <div style="margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-    <label id="lblPres" style="display:flex;align-items:center;gap:7px;font-size:12.5px;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.25);cursor:pointer;user-select:none">
-      <input type="checkbox" id="chkPres" onchange="modoPresentacion(this.checked)" style="cursor:pointer">
-      <span>Modo presentación</span>
-    </label>
     <div class="cut" style="margin-left:0"><b>Corte de datos:</b> <span id="corte"></span> · <b>Hoy:</b> <span id="hoyd"></span><br>Fuente: <span id="fuente">Google Sheets</span> · <a href="#" onclick="recargar();return false" style="color:#bfdbfe">Actualizar</a></div>
     </div>
   </div>
@@ -526,7 +522,6 @@ window.tipMove=function(ev){
 window.tipHide=function(){ tip.style.display='none'; };
 
 if(new URLSearchParams(location.search).get('presentacion')==='1'){
-  document.getElementById('chkPres').checked = true;
   modoPresentacion(true);
 }
 
@@ -848,7 +843,7 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   /* Parámetros del cobro. Para pasar al cobro siguiente, se cambia aquí. */
   const NUM_COBRO  = 1;
   const DESCUENTO  = 80000000;     // acuerdo con la interventoría, solo en el cobro N° 1
-  const DESC_SOBRE = 'sin_iva';    // 'sin_iva': se descuenta del valor antes de IVA · 'con_iva': del total con IVA
+  const DESC_SOBRE = 'con_iva';    // 'con_iva': el IVA se calcula sobre el valor cobrable y el descuento se resta del total con IVA · 'sin_iva': se resta antes de calcular el IVA
   const IVA        = 0.19;
 
   document.getElementById('cobroNum').textContent  = NUM_COBRO;
@@ -896,15 +891,15 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
              ['(−) Descuento por acuerdo con la interventoría', -DESCUENTO],
              ['Valor neto sin IVA', netoSin],
              ['IVA 19%', iva],
-             ['VALOR NETO A FACTURAR (con IVA)', totalFact]];
+             ['VALOR NETO DEL COBRO (con IVA)', totalFact]];
   } else {
     const iva = sub*IVA, bruto = sub + iva;
     totalFact = bruto - DESCUENTO; neto = totalFact/(1+IVA);
     filas = [['Valor cobrable sin IVA', sub],
-             ['IVA 19%', iva],
+             ['IVA 19% (sobre el valor cobrable)', iva],
              ['Total con IVA', bruto],
              ['(−) Descuento por acuerdo con la interventoría', -DESCUENTO],
-             ['VALOR NETO A FACTURAR (con IVA)', totalFact]];
+             ['VALOR NETO DEL COBRO (con IVA)', totalFact]];
   }
   const fN = x => (x<0?'− ':'') + fF(Math.abs(x));
   let l = '<thead><tr><th class="volcell">Concepto</th><th>Valor</th></tr></thead><tbody>';
@@ -918,7 +913,7 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   document.getElementById('kcobro').innerHTML = `
    <div class="kpi ok"><div class="n">${fM(sub)}</div><div class="t">Cobrable sin IVA — volúmenes completos</div></div>
    <div class="kpi"><div class="n" style="color:#b91c1c">− ${fM(DESCUENTO)}</div><div class="t">Descuento acuerdo interventoría</div></div>
-   <div class="kpi big"><div class="n" style="color:${totalFact<0?'#b91c1c':'var(--brand2)'}">${fM(totalFact)}</div><div class="t">Neto a facturar con IVA — cobro N° ${NUM_COBRO}</div></div>
+   <div class="kpi big"><div class="n" style="color:${totalFact<0?'#b91c1c':'var(--brand2)'}">${fM(totalFact)}</div><div class="t">Neto del cobro con IVA — cobro N° ${NUM_COBRO}</div></div>
    <div class="kpi obs"><div class="n">${fM(pend)}</div><div class="t">Aún sin cobrar, sin IVA (volúmenes incompletos)</div></div>`;
 })();
 
