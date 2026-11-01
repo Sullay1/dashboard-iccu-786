@@ -93,6 +93,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
     <div class="tab" data-t="t3" onclick="showTab('t3',this)">3 · Curva S</div>
     <div class="tab" data-t="t4" onclick="showTab('t4',this)">4 · Costos del Proyecto</div>
     <div class="tab" data-t="t5" onclick="showTab('t5',this)">5 · Resumen de Avance</div>
+    <div class="tab" data-t="t6" onclick="showTab('t6',this)">6 · Cobros</div>
   </div>
 
   <div class="panel" id="t1" style="display:none">
@@ -118,7 +119,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
     <b>(condicionada)</b> indica aprobación sujeta a ajustes: se muestra como aprobada pero <b>no suma al valor cobrable</b> hasta que se registre una <code>APROBACION</code> en la bitácora.</div>
     <h3 class="sec" style="margin-top:22px">Valor cobrable a la fecha</h3>
     <div style="overflow:auto"><table class="mtable" id="cobro" style="max-width:900px"></table></div>
-    <div class="note">Suma del valor de los componentes con concepto favorable. El aporte de un componente es el valor de su volumen dividido entre el número de componentes que lo integran.</div>
+    <div class="note">Suma del valor de los <b>volúmenes completos</b> con concepto favorable. Un volumen con varios componentes (el II con II.1 a II.5 y el X con X.1 y X.2) solo es cobrable en un tramo cuando todos sus componentes están aprobados; si falta uno, no suma. El detalle está en la pestaña <b>6 · Cobros</b>.</div>
     <h3 class="sec" style="margin-top:22px">Tiempo de respuesta de la interventoría</h3>
     <div style="overflow:auto"><table class="mtable" id="ttbl" style="max-width:900px"></table></div>
     <div class="note">Días calendario entre cada entrega del consultor y la respuesta de la interventoría. Se calcula automáticamente desde las fechas de la bitácora.</div>
@@ -171,6 +172,21 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
       <div><h3 class="sec" style="font-size:13.5px">Aprobado por volumen — todo el proyecto</h3><div id="resAprVol"></div></div>
     </div>
     <div class="note">Aprobado = valor de los entregables con concepto favorable de la interventoría (habilita el cobro). Las aprobaciones condicionadas no suman aquí.</div>
+  </div>
+
+  <div class="panel" id="t6" style="display:none">
+    <h3 class="sec">Cobros — Cobro N° <span id="cobroNum">1</span></h3>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr);margin:6px 0 14px" id="kcobro"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--okbg);border:1px solid var(--ok)"></span><b>Cobrable</b> — volumen completo con aprobación plena</span>
+      <span><span class="dot" style="background:var(--obsbg);border:1px solid var(--obs)"></span>Parcial — faltan componentes del volumen por aprobar</span>
+      <span><span class="dot" style="background:var(--penbg);border:1px solid var(--pen)"></span>Pendiente — sin aprobación</span>
+    </div>
+    <div style="overflow:auto;max-height:75vh"><table class="mtable" id="cobroTbl"></table></div>
+    <h3 class="sec" style="margin-top:22px">Liquidación del cobro N° <span id="cobroNum2">1</span></h3>
+    <div style="overflow:auto"><table class="mtable" id="cobroLiq" style="max-width:640px"></table></div>
+    <div class="note">Un volumen se cobra <b>por tramo</b> y solo cuando <b>todos</b> sus componentes tienen <code>APROBACION</code> plena. El <b>Volumen II</b> (II.1 a II.5) y el <b>Volumen X</b> (X.1 y X.2) se cobran completos o no se cobran: mientras falte un componente, el valor del volumen de ese tramo queda pendiente. Las aprobaciones condicionadas no cuentan.
+    <br>Este cobro acumula todo lo que se vaya aprobando hasta que se cierre. El cobro N° 2 arranca cuando se termine este.</div>
   </div>
 </div>
 <div class="gtip" id="gtip"></div>
@@ -352,7 +368,7 @@ function recargar(){
   document.getElementById('cargando').innerHTML=
     '<div style="font-size:15px;font-weight:600;color:var(--brand)">Actualizando…</div>';
   document.getElementById('tabs').style.display='none';
-  ['t1','t2','t3','t4'].forEach(t=>document.getElementById(t).style.display='none');
+  ['t1','t2','t3','t4','t5','t6'].forEach(t=>document.getElementById(t).style.display='none');
   iniciar();
 }
 
@@ -438,6 +454,18 @@ function diasEnInterv(t,c){
    a todos los tramos pero no tienen valor asignado en COSTOS. */
 function aplica(t,c){ return APLICA.has(t+'|'+c); }
 
+/* Regla de cobro: un volumen se cobra, POR TRAMO, solo cuando TODOS sus
+   componentes (los que aplican a ese tramo) tienen APROBACION plena.
+   Volumen II = II.1 a II.5 · Volumen X = X.1 y X.2. Una aprobación
+   condicionada no cuenta (aprob() solo reconoce APROBACION). */
+function volCobrable(trk, v){
+  const cs = COMPS.filter(c => c.v===v && aplica(trk,c.c));
+  const aprobados = cs.filter(c => aprob(trk,c.c)).length;
+  const valor = COSTO[trk][v] || 0;
+  return {n:cs.length, aprobados:aprobados, valor:valor,
+          ok: cs.length>0 && aprobados===cs.length && valor>0};
+}
+
 /* ── KPIs ── */
 (function(){
   const cnt={A:0,T:0,C:0,P:0}; let tot=0;
@@ -467,7 +495,7 @@ window.modoPresentacion=function(on){
     showTab('t1', document.querySelector('.tab[data-t="t1"]'));
 };
 window.showTab=function(id,el){
-  ['t1','t2','t3','t4','t5'].forEach(t=>document.getElementById(t).style.display = t===id?'block':'none');
+  ['t1','t2','t3','t4','t5','t6'].forEach(t=>document.getElementById(t).style.display = t===id?'block':'none');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
 };
@@ -559,20 +587,22 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   document.getElementById('apr').innerHTML=t+'</tbody>';
 
   // valor cobrable
-  let cb='<thead><tr><th class="volcell">Tramo</th><th>Componentes aprobados</th><th>Valor cobrable sin IVA</th><th>Con IVA</th><th>% del tramo</th></tr></thead><tbody>';
-  let ctot=0, cn=0;
+  let cb='<thead><tr><th class="volcell">Tramo</th><th>Componentes aprobados</th><th>Volúmenes cobrables</th><th>Valor cobrable sin IVA</th><th>Con IVA</th><th>% del tramo</th></tr></thead><tbody>';
+  let ctot=0, cn=0, cvol=0, TOTP=0;
   TRAMOS.forEach(tr=>{
-    let v=0,n=0,tv=0;
-    COMPS.forEach(c=>{ const w=PESO[key(tr.k,c.c)]||0; if(!w) return; tv+=w; if(aprob(tr.k,c.c)){ v+=w; n++; } });
-    ctot+=v; cn+=n;
+    let v=0,n=0,nv=0,tv=0;
+    COMPS.forEach(c=>{ if(aplica(tr.k,c.c) && aprob(tr.k,c.c)) n++; });
+    VOLS.forEach(vol=>{ const x=volCobrable(tr.k,vol); tv+=x.valor; if(x.ok){ v+=x.valor; nv++; } });
+    ctot+=v; cn+=n; cvol+=nv; TOTP+=tv;
     cb+=`<tr><td class="volcell">${tr.name}</td><td style="text-align:center">${n}</td>
+      <td style="text-align:center">${nv}</td>
       <td style="text-align:right;font-weight:700">${v?fF(v):'—'}</td>
       <td style="text-align:right">${v?fF(v*1.19):'—'}</td>
       <td style="text-align:center;color:var(--ok);font-weight:700">${tv?(v/tv*100).toFixed(1):'0.0'}%</td></tr>`;
   });
-  const TOTP=Object.values(PESO).reduce((a,b)=>a+b,0);
   cb+=`<tr style="font-weight:800"><td class="volcell" style="color:var(--ok)">TOTAL</td>
     <td style="text-align:center">${cn}</td>
+    <td style="text-align:center">${cvol}</td>
     <td style="text-align:right;color:var(--ok)">${fF(ctot)}</td>
     <td style="text-align:right;color:var(--ok)">${fF(ctot*1.19)}</td>
     <td style="text-align:center;color:var(--ok)">${(ctot/TOTP*100).toFixed(1)}%</td></tr>`;
@@ -811,6 +841,85 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   pintar('resRadVol',   VOLS.filter(v=>Object.values(COSTO).some(c=>c[v])).map(v=>[`Volumen ${v}`, pctVol(v, priEntrega)]));
   pintar('resAprTramo', TRAMOS.map(tr=>[tr.name, pctTramo(tr.k, aprob)]));
   pintar('resAprVol',   VOLS.filter(v=>Object.values(COSTO).some(c=>c[v])).map(v=>[`Volumen ${v}`, pctVol(v, aprob)]));
+})();
+
+/* ══ TAB 6 · COBROS ══ */
+(function(){
+  /* Parámetros del cobro. Para pasar al cobro siguiente, se cambia aquí. */
+  const NUM_COBRO  = 1;
+  const DESCUENTO  = 80000000;     // acuerdo con la interventoría, solo en el cobro N° 1
+  const DESC_SOBRE = 'sin_iva';    // 'sin_iva': se descuenta del valor antes de IVA · 'con_iva': del total con IVA
+  const IVA        = 0.19;
+
+  document.getElementById('cobroNum').textContent  = NUM_COBRO;
+  document.getElementById('cobroNum2').textContent = NUM_COBRO;
+
+  const VV = VOLS.filter(v => TRAMOS.some(t => COSTO[t.k][v]));
+  let t = '<thead><tr><th class="volcell" style="min-width:250px">Volumen</th>';
+  TRAMOS.forEach(tr => t += `<th style="min-width:128px">${tr.name}</th>`);
+  t += '<th style="min-width:140px">Cobrable</th></tr></thead><tbody>';
+
+  const porTramo = TRAMOS.map(() => 0);
+  let sub = 0, pend = 0;
+  VV.forEach(v => {
+    let fila = 0;
+    t += `<tr><td class="volcell" style="white-space:normal"><span class="rom">${v}</span><span class="vn" style="display:block;margin-top:1px">${VOLDESC[v]||''}</span></td>`;
+    TRAMOS.forEach((tr,j) => {
+      const x = volCobrable(tr.k, v);
+      if(!x.valor){ t += '<td style="text-align:center;color:var(--muted)">—</td>'; return; }
+      if(x.ok){
+        porTramo[j] += x.valor; fila += x.valor;
+        t += `<td class="td-A" style="text-align:right"><b>${fF(x.valor)}</b>
+              <div style="font-size:10px;color:var(--ok);font-weight:700">✔ ${x.n>1?'Volumen completo ('+x.aprobados+'/'+x.n+')':'Aprobado'}</div></td>`;
+      } else {
+        pend += x.valor;
+        const parcial = x.aprobados > 0;
+        t += `<td class="${parcial?'td-C':'td-P'}" style="text-align:right">
+              <div style="color:var(--muted);font-size:11px">${fF(x.valor)}</div>
+              <div style="font-size:10px;font-weight:700;color:${parcial?'var(--obs)':'var(--muted)'}">${x.n>1?x.aprobados+'/'+x.n+' componentes':'Pendiente'}</div></td>`;
+      }
+    });
+    sub += fila;
+    t += `<td style="text-align:right;font-weight:800">${fila?fF(fila):'—'}</td></tr>`;
+  });
+  t += '</tbody><tfoot><tr><td class="volcell" style="color:var(--ok)">Cobrable sin IVA</td>';
+  porTramo.forEach(s => t += `<td style="text-align:right;font-weight:700;color:var(--ok)">${s?fF(s):'—'}</td>`);
+  t += `<td style="text-align:right;font-weight:800;color:var(--ok)">${fF(sub)}</td></tr></tfoot>`;
+  document.getElementById('cobroTbl').innerHTML = t;
+
+  /* Liquidación */
+  let filas, neto, totalFact;
+  if(DESC_SOBRE === 'sin_iva'){
+    const netoSin = sub - DESCUENTO, iva = netoSin*IVA;
+    totalFact = netoSin + iva; neto = netoSin;
+    filas = [['Valor cobrable sin IVA', sub],
+             ['(−) Descuento por acuerdo con la interventoría', -DESCUENTO],
+             ['Valor neto sin IVA', netoSin],
+             ['IVA 19%', iva],
+             ['VALOR NETO A FACTURAR (con IVA)', totalFact]];
+  } else {
+    const iva = sub*IVA, bruto = sub + iva;
+    totalFact = bruto - DESCUENTO; neto = totalFact/(1+IVA);
+    filas = [['Valor cobrable sin IVA', sub],
+             ['IVA 19%', iva],
+             ['Total con IVA', bruto],
+             ['(−) Descuento por acuerdo con la interventoría', -DESCUENTO],
+             ['VALOR NETO A FACTURAR (con IVA)', totalFact]];
+  }
+  const fN = x => (x<0?'− ':'') + fF(Math.abs(x));
+  let l = '<thead><tr><th class="volcell">Concepto</th><th>Valor</th></tr></thead><tbody>';
+  filas.forEach((f,i) => {
+    const ultimo = i === filas.length-1, desc = f[1] < 0 && f[0].startsWith('(');
+    l += `<tr style="${ultimo?'font-weight:800;font-size:14px':''}"><td class="volcell" style="${ultimo?'color:var(--brand)':desc?'color:#b91c1c':''}">${f[0]}</td>
+          <td style="text-align:right;${ultimo?'color:var(--brand)':desc?'color:#b91c1c;font-weight:700':'font-weight:700'}">${fN(f[1])}</td></tr>`;
+  });
+  document.getElementById('cobroLiq').innerHTML = l + '</tbody>';
+
+  document.getElementById('kcobro').innerHTML = `
+   <div class="kpi ok"><div class="n">${fM(sub)}</div><div class="t">Cobrable sin IVA — volúmenes completos</div></div>
+   <div class="kpi"><div class="n" style="color:#b91c1c">− ${fM(DESCUENTO)}</div><div class="t">Descuento acuerdo interventoría</div></div>
+   <div class="kpi big"><div class="n" style="color:${totalFact<0?'#b91c1c':'var(--brand2)'}">${fM(totalFact)}</div><div class="t">Neto a facturar con IVA — cobro N° ${NUM_COBRO}</div></div>
+   <div class="kpi obs"><div class="n">${fM(pend)}</div><div class="t">Aún sin cobrar, sin IVA (volúmenes incompletos)</div></div>`;
 })();
 
 }  /* fin de render */
