@@ -68,7 +68,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
 .callout{border-left:4px solid var(--brand2);background:#eff6ff;border-radius:0 10px 10px 0;padding:12px 16px;font-size:13.5px;color:var(--ink2);line-height:1.6}
 .callout.gris{border-left-color:#94a3b8;background:#f8fafc;font-size:12.5px}
 .dp{display:inline-block;min-width:36px;text-align:center;padding:2px 9px;border-radius:10px;font-weight:800;font-size:12.5px}
-.dp-ok{background:var(--okbg);color:#166534} .dp-al{background:var(--obsbg);color:#92400e} .dp-cr{background:#fee2e2;color:#b91c1c}
+.dp-ok{background:#e2e8f0;color:#475569} .dp-al{background:var(--obsbg);color:#92400e} .dp-cr{background:#fee2e2;color:#b91c1c}
 .sbtn{padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink2);font-size:12.5px;font-weight:600;cursor:pointer}
 .sbtn.on{background:var(--brand2);color:#fff;border-color:var(--brand2)}
 .vermas{display:inline-block;margin-top:8px;font-size:12.5px;color:var(--brand2);font-weight:600;cursor:pointer;text-decoration:underline}
@@ -1034,7 +1034,7 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   document.getElementById('t7Kpis').innerHTML=`
    <div class="kpi"><div class="n">${cerr.length}</div><div class="t">Entregas ya respondidas</div></div>
    <div class="kpi"><div class="n">${pr(pA)}${pA!==null?' d':''}</div><div class="t">Promedio ANTES de la suspensión</div></div>
-   <div class="kpi ok"><div class="n">${pr(pD)}${pD!==null?' d':''}</div><div class="t">Promedio DESPUÉS de la suspensión</div></div>
+   <div class="kpi"><div class="n" style="color:#2563eb">${pr(pD)}${pD!==null?' d':''}</div><div class="t">Promedio DESPUÉS de la suspensión</div></div>
    <div class="kpi obs"><div class="n">${pend.length}</div><div class="t">Esperando respuesta hoy</div></div>
    <div class="kpi"><div class="n" style="color:#b91c1c">${sobre30}</div><div class="t">Revisiones de después de la suspensión con más de 30 días</div></div>`;
 
@@ -1050,7 +1050,7 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
   const dist=(arr,et)=>{ const n=arr.length; if(!n) return `<div style="margin:0 0 14px"><div style="font-size:12.5px;margin-bottom:3px">${et}</div><div style="font-size:12px;color:var(--ink2)">sin datos</div></div>`;
     const a=arr.filter(x=>x<=15).length,b=arr.filter(x=>x>15&&x<=30).length,c=n-a-b;
     const seg=(v,col)=>v?`<div style="width:${v/n*100}%;background:${col};color:#fff;font-size:11.5px;font-weight:700;text-align:center;line-height:24px">${Math.round(v/n*100)}%</div>`:'';
-    return `<div style="margin:0 0 14px"><div style="font-size:12.5px;margin-bottom:3px">${et} <span style="color:var(--ink2)">(${n})</span></div><div style="display:flex;border-radius:6px;overflow:hidden;height:24px;background:#e5e7eb">${seg(a,'#16a34a')}${seg(b,'#f59e0b')}${seg(c,'#dc2626')}</div><div style="font-size:11px;color:var(--ink2);margin-top:2px">${a} hasta 15 d · ${b} de 16 a 30 d · ${c} de más de 30 d</div></div>`; };
+    return `<div style="margin:0 0 14px"><div style="font-size:12.5px;margin-bottom:3px">${et} <span style="color:var(--ink2)">(${n})</span></div><div style="display:flex;border-radius:6px;overflow:hidden;height:24px;background:#e5e7eb">${seg(a,'#94a3b8')}${seg(b,'#f59e0b')}${seg(c,'#dc2626')}</div><div style="font-size:11px;color:var(--ink2);margin-top:2px">${a} hasta 15 d · ${b} de 16 a 30 d · ${c} de más de 30 d</div></div>`; };
   document.getElementById('t7Dist').innerHTML=dist(dA,'Antes de la suspensión')+dist(dD,'Después de la suspensión')+dist(dP,'Esperando respuesta hoy');
 
   /* Pendientes */
