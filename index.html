@@ -62,7 +62,17 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
 .cbar .cvv{flex:0 0 118px;font-size:11.5px;text-align:right;font-weight:700;color:var(--ink2)}
 .gtip{position:fixed;z-index:50;background:#0f172a;color:#f1f5f9;padding:10px 12px;border-radius:8px;font-size:12px;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.35);pointer-events:none;display:none;line-height:1.5}
 .gtip b{color:#93c5fd}
-@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.header .cut{margin-left:0}}
+.kpis.k5{grid-template-columns:repeat(5,1fr)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}
+.sub-t{margin:0 0 6px;font-size:13px;color:var(--ink2);font-weight:700}
+.callout{border-left:4px solid var(--brand2);background:#eff6ff;border-radius:0 10px 10px 0;padding:12px 16px;font-size:13.5px;color:var(--ink2);line-height:1.6}
+.callout.gris{border-left-color:#94a3b8;background:#f8fafc;font-size:12.5px}
+.dp{display:inline-block;min-width:36px;text-align:center;padding:2px 9px;border-radius:10px;font-weight:800;font-size:12.5px}
+.dp-ok{background:var(--okbg);color:#166534} .dp-al{background:var(--obsbg);color:#92400e} .dp-cr{background:#fee2e2;color:#b91c1c}
+.sbtn{padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink2);font-size:12.5px;font-weight:600;cursor:pointer}
+.sbtn.on{background:var(--brand2);color:#fff;border-color:var(--brand2)}
+.vermas{display:inline-block;margin-top:8px;font-size:12.5px;color:var(--brand2);font-weight:600;cursor:pointer;text-decoration:underline}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.kpis.k5{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}.header .cut{margin-left:0}}
 </style>
 </head>
 <body>
@@ -90,6 +100,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
     <div class="tab" data-t="t4" onclick="showTab('t4',this)">4 · Costos del Proyecto</div>
     <div class="tab" data-t="t5" onclick="showTab('t5',this)">5 · Resumen de Avance</div>
     <div class="tab" data-t="t6" onclick="showTab('t6',this)">6 · Cobros</div>
+    <div class="tab" data-t="t7" onclick="showTab('t7',this)">7 · Tiempos de la Interventoría</div>
   </div>
 
   <div class="panel" id="t1" style="display:none">
@@ -118,7 +129,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
     <div class="note">Suma del valor de los <b>volúmenes completos</b> con concepto favorable. Un volumen con varios componentes (el II con II.1 a II.5 y el X con X.1 y X.2) solo es cobrable en un tramo cuando todos sus componentes están aprobados; si falta uno, no suma. El detalle está en la pestaña <b>6 · Cobros</b>.</div>
     <h3 class="sec" style="margin-top:22px">Tiempo de respuesta de la interventoría</h3>
     <div style="overflow:auto"><table class="mtable" id="ttbl" style="max-width:900px"></table></div>
-    <div class="note">Días calendario entre cada entrega del consultor y la respuesta de la interventoría. Se calcula automáticamente desde las fechas de la bitácora.</div>
+    <div class="note">Días calendario entre cada entrega del consultor y la respuesta de la interventoría. Se calcula automáticamente desde las fechas de la bitácora. Esta tabla cuenta todos los días corridos; en la pestaña <b>7 · Tiempos de la Interventoría</b> se descuenta el periodo de suspensión.</div>
   </div>
 
   <div class="panel" id="t3" style="display:none">
@@ -168,6 +179,34 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",-appl
       <div><h3 class="sec" style="font-size:13.5px">Aprobado por volumen — todo el proyecto</h3><div id="resAprVol"></div></div>
     </div>
     <div class="note">Aprobado = valor cobrable: volúmenes con concepto favorable de la interventoría en todos sus componentes. Los volúmenes II y X solo suman en un tramo cuando están completos. Las aprobaciones condicionadas no suman aquí.</div>
+  </div>
+
+  <div class="panel" id="t7" style="display:none">
+    <h3 class="sec">Tiempos de respuesta de la interventoría</h3>
+    <div class="callout" id="t7Resumen"></div>
+    <div class="callout gris" style="margin-top:10px"><b>Cómo se lee esta hoja.</b> Cada vez que el consultor entrega un componente, la interventoría debe responder. Aquí se cuentan los <b>días que pasaron entre la entrega y la respuesta</b>. Los días de la <b>suspensión</b> (<span id="t7SuspTxt"></span>) <b>no se cuentan</b>: si una revisión atravesó la suspensión, se le restan esos días.
+      Colores: <span class="dp dp-ok">hasta 15 días</span> <span class="dp dp-al">16 a 30 días</span> <span class="dp dp-cr">más de 30 días</span></div>
+    <div class="kpis k5" id="t7Kpis" style="margin:14px 0 6px"></div>
+
+    <h3 class="sec" style="margin-top:22px">Antes y después de la suspensión</h3>
+    <div class="g2">
+      <div><h4 class="sub-t">Promedio de días que tardó en responder</h4><div id="t7Barras"></div></div>
+      <div><h4 class="sub-t">¿Qué tan rápido respondió? (cada barra suma el 100% de las respuestas del periodo)</h4><div id="t7Dist"></div></div>
+    </div>
+
+    <h3 class="sec" style="margin-top:26px">Entregas que siguen esperando respuesta hoy</h3>
+    <div style="overflow:auto"><table class="mtable" id="t7Pend"></table></div>
+    <div id="t7PendMas"></div>
+
+    <h3 class="sec" style="margin-top:26px">Las respuestas más lentas</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px" id="t7Btns"></div>
+    <div style="overflow:auto"><table class="mtable" id="t7Lentas"></table></div>
+    <div id="t7LentasMas"></div>
+
+    <h3 class="sec" style="margin-top:26px">Resumen por tramo</h3>
+    <div style="overflow:auto"><table class="mtable" id="t7Tramo"></table></div>
+
+    <div class="note" id="t7Nota"></div>
   </div>
 
   <div class="panel" id="t6" style="display:none">
@@ -364,7 +403,7 @@ function recargar(){
   document.getElementById('cargando').innerHTML=
     '<div style="font-size:15px;font-weight:600;color:var(--brand)">Actualizando…</div>';
   document.getElementById('tabs').style.display='none';
-  ['t1','t2','t3','t4','t5','t6'].forEach(t=>document.getElementById(t).style.display='none');
+  ['t1','t2','t3','t4','t5','t6','t7'].forEach(t=>document.getElementById(t).style.display='none');
   iniciar();
 }
 
@@ -399,6 +438,10 @@ const _n  = new Date();
 const TODAY = _n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
 /* Fecha de la prórroga del contrato. Para moverla, cambie solo esta línea. */
 const PRORROGA = '2026-07-04';
+/* Suspensión del contrato: estos días NO cuentan en los tiempos de respuesta de
+   la interventoría (pestaña 7). Para moverla, cambie solo estas dos líneas. */
+const SUSP_INI = '2026-08-24';
+const SUSP_FIN = '2026-09-24';
 document.getElementById('hoyd').textContent = _n.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'});
 document.getElementById('corte').textContent = fmt(META.corte);
 window.pintarCurva=window.pintarCurva||function(){};
@@ -491,7 +534,7 @@ window.modoPresentacion=function(on){
     showTab('t1', document.querySelector('.tab[data-t="t1"]'));
 };
 window.showTab=function(id,el){
-  ['t1','t2','t3','t4','t5','t6'].forEach(t=>document.getElementById(t).style.display = t===id?'block':'none');
+  ['t1','t2','t3','t4','t5','t6','t7'].forEach(t=>document.getElementById(t).style.display = t===id?'block':'none');
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
 };
@@ -932,6 +975,120 @@ if(new URLSearchParams(location.search).get('presentacion')==='1'){
    <div class="kpi"><div class="n" style="color:#b91c1c">− ${fM(DESCUENTO)}</div><div class="t">Descuento acuerdo interventoría</div></div>
    <div class="kpi big"><div class="n" style="color:${totalFact<0?'#b91c1c':'var(--brand2)'}">${fM(totalFact)}</div><div class="t">Neto del cobro con IVA — cobro N° ${NUM_COBRO}</div></div>
    <div class="kpi obs"><div class="n">${fM(pend)}</div><div class="t">Aún sin cobrar, sin IVA (volúmenes incompletos)</div></div>`;
+})();
+
+/* ═══ Pestaña 7 · Tiempos de respuesta de la interventoría ═══
+   Días entre cada ENTREGA y su RESPUESTA, descontando la suspensión.
+   Las filas "SUSPENSIÓN" de la bitácora son marcas internas, no respuestas reales: se ignoran. */
+(function(){
+  const DIA=86400000;
+  const dif=(a,b)=>Math.round((D(b)-D(a))/DIA);
+  const neto=(a,b)=>{ const bruto=dif(a,b); const s0=a>SUSP_INI?a:SUSP_INI, s1=b<SUSP_FIN?b:SUSP_FIN;
+    const susp=s1>s0?dif(s0,s1):0; return {bruto, neto:Math.max(0,bruto-susp), susp}; };
+  const esMarca=x=>x.ev==='RESPUESTA' && /suspensi/i.test(x.r||'');
+  const nomT=k=>(TRAMOS.find(t=>t.k===k)||{}).name||k;
+  const cls=d=>d<=15?'dp-ok':(d<=30?'dp-al':'dp-cr');
+  const pill=d=>`<span class="dp ${cls(d)}">${d}</span>`;
+  const per=f=>f<=SUSP_INI?'antes':(f<=SUSP_FIN?'durante':'despues');
+  const prom=a=>a.length?Math.round(a.reduce((s,x)=>s+x,0)/a.length):null;
+  const pr=v=>v===null?'—':v;
+
+  const cerr=[], pend=[]; let marcas=0;
+  TRAMOS.forEach(tr=>COMPS.forEach(c=>{
+    const all=evsDe(tr.k,c.c); if(!all.length) return;
+    marcas+=all.filter(esMarca).length;
+    const seq=all.filter(x=>!esMarca(x));
+    for(let i=0;i<seq.length;i++){
+      if(seq[i].ev!=='ENTREGA') continue;
+      const nx=seq[i+1];
+      if(nx && nx.ev==='RESPUESTA'){
+        const n=neto(seq[i].f,nx.f);
+        cerr.push({t:tr.k,c:c.c,n:c.n,f0:seq[i].f,f1:nx.f,rad:nx.r||'',res:nx.res,bruto:n.bruto,d:n.neto,susp:n.susp,p:per(nx.f)});
+      }
+    }
+    const last=seq[seq.length-1];
+    if(last && last.ev==='ENTREGA' && estado(tr.k,c.c)==='T'){
+      const n=neto(last.f,TODAY>last.f?TODAY:last.f);
+      pend.push({t:tr.k,c:c.c,n:c.n,f0:last.f,rad:last.r||'',bruto:n.bruto,d:n.neto,susp:n.susp});
+    }
+  }));
+
+  const G={antes:cerr.filter(x=>x.p==='antes'),durante:cerr.filter(x=>x.p==='durante'),despues:cerr.filter(x=>x.p==='despues')};
+  const dA=G.antes.map(x=>x.d), dD=G.despues.map(x=>x.d), dP=pend.map(x=>x.d);
+  const pA=prom(dA), pD=prom(dD), pP=prom(dP);
+  const maxP=pend.reduce((m,x)=>Math.max(m,x.d),0);
+  const todos=dD.concat(dP);   // revisiones desde que se reanudó el contrato (respondidas + pendientes)
+  const sobre30=todos.filter(x=>x>30).length;
+
+  const F=s=>fmt(s);
+  document.getElementById('t7SuspTxt').textContent=F(SUSP_INI)+' al '+F(SUSP_FIN)+' ('+dif(SUSP_INI,SUSP_FIN)+' días)';
+
+  /* Frase resumen automática */
+  let h=`Desde que el consultor empezó a entregar, la interventoría ha respondido <b>${cerr.length}</b> entregas. `;
+  if(pA!==null) h+=`<b>Antes de la suspensión</b> tardó en promedio <b>${pA} días</b> (${G.antes.length} respuestas). `;
+  if(pD!==null) h+=`<b>Desde que terminó la suspensión (${F(SUSP_FIN)})</b> tardó en promedio <b>${pD} días</b> (${G.despues.length} respuestas). `;
+  else h+=`Todavía no hay respuestas registradas después de la suspensión (${F(SUSP_FIN)}). `;
+  h+=pend.length?`Hoy hay <b>${pend.length}</b> entregas esperando respuesta; la más antigua lleva <b>${maxP} días</b> sin contar la suspensión.`:`Hoy no hay entregas esperando respuesta.`;
+  document.getElementById('t7Resumen').innerHTML=h;
+
+  document.getElementById('t7Kpis').innerHTML=`
+   <div class="kpi"><div class="n">${cerr.length}</div><div class="t">Entregas ya respondidas</div></div>
+   <div class="kpi"><div class="n">${pr(pA)}${pA!==null?' d':''}</div><div class="t">Promedio ANTES de la suspensión</div></div>
+   <div class="kpi ok"><div class="n">${pr(pD)}${pD!==null?' d':''}</div><div class="t">Promedio DESPUÉS de la suspensión</div></div>
+   <div class="kpi obs"><div class="n">${pend.length}</div><div class="t">Esperando respuesta hoy</div></div>
+   <div class="kpi"><div class="n" style="color:#b91c1c">${sobre30}</div><div class="t">Revisiones de después de la suspensión con más de 30 días</div></div>`;
+
+  /* Barras de promedio */
+  const mx=Math.max(1,pA||0,pD||0,pP||0);
+  const barra=(et,v,col,sub)=>`<div style="margin:0 0 12px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px"><span>${et}</span><b>${v===null?'sin datos':v+' días'}</b></div><div style="background:#e5e7eb;border-radius:6px;height:20px"><div style="width:${v===null?0:Math.max(2,v/mx*100)}%;height:100%;background:${col};border-radius:6px"></div></div><div style="font-size:11px;color:var(--ink2);margin-top:2px">${sub}</div></div>`;
+  document.getElementById('t7Barras').innerHTML=
+    barra('Antes de la suspensión',pA,'#64748b',G.antes.length+' respuestas')+
+    barra('Después de la suspensión (respondidas)',pD,'#2563eb',G.despues.length+' respuestas')+
+    barra('Esperando respuesta hoy',pP,'#f59e0b',pend.length+' entregas, días corridos sin contar la suspensión');
+
+  /* Distribución */
+  const dist=(arr,et)=>{ const n=arr.length; if(!n) return `<div style="margin:0 0 14px"><div style="font-size:12.5px;margin-bottom:3px">${et}</div><div style="font-size:12px;color:var(--ink2)">sin datos</div></div>`;
+    const a=arr.filter(x=>x<=15).length,b=arr.filter(x=>x>15&&x<=30).length,c=n-a-b;
+    const seg=(v,col)=>v?`<div style="width:${v/n*100}%;background:${col};color:#fff;font-size:11.5px;font-weight:700;text-align:center;line-height:24px">${Math.round(v/n*100)}%</div>`:'';
+    return `<div style="margin:0 0 14px"><div style="font-size:12.5px;margin-bottom:3px">${et} <span style="color:var(--ink2)">(${n})</span></div><div style="display:flex;border-radius:6px;overflow:hidden;height:24px;background:#e5e7eb">${seg(a,'#16a34a')}${seg(b,'#f59e0b')}${seg(c,'#dc2626')}</div><div style="font-size:11px;color:var(--ink2);margin-top:2px">${a} hasta 15 d · ${b} de 16 a 30 d · ${c} de más de 30 d</div></div>`; };
+  document.getElementById('t7Dist').innerHTML=dist(dA,'Antes de la suspensión')+dist(dD,'Después de la suspensión')+dist(dP,'Esperando respuesta hoy');
+
+  /* Pendientes */
+  const pends=pend.slice().sort((a,b)=>b.d-a.d);
+  const filaP=x=>`<tr><td>${nomT(x.t)}</td><td>${x.c} · ${x.n}</td><td>${F(x.f0)}</td><td>${x.rad}</td><td style="text-align:center">${x.susp?x.bruto+' <span style="color:var(--ink2)">− '+x.susp+'</span>':x.bruto}</td><td style="text-align:center">${pill(x.d)}</td></tr>`;
+  const hP='<thead><tr><th>Tramo</th><th>Componente</th><th>Entregado</th><th>Radicado</th><th>Días corridos</th><th>Días contados</th></tr></thead>';
+  let vp=false;
+  const pintaP=()=>{ const l=vp?pends:pends.slice(0,15);
+    document.getElementById('t7Pend').innerHTML=pends.length?hP+'<tbody>'+l.map(filaP).join('')+'</tbody>':'<tbody><tr><td>No hay entregas esperando respuesta.</td></tr></tbody>';
+    document.getElementById('t7PendMas').innerHTML=pends.length>15?`<span class="vermas" id="t7PM">${vp?'Ver solo las 15 más antiguas':'Ver las '+pends.length+' entregas'}</span>`:'';
+    const b=document.getElementById('t7PM'); if(b) b.onclick=()=>{vp=!vp;pintaP();}; };
+  pintaP();
+
+  /* Más lentas */
+  let modo=G.despues.length?'despues':'todo', vl=false;
+  const nombres={todo:'Todas',antes:'Antes de la suspensión',despues:'Después de la suspensión'};
+  const hL='<thead><tr><th>Tramo</th><th>Componente</th><th>Entregado</th><th>Respondido</th><th>Resultado</th><th>Días corridos</th><th>Días contados</th></tr></thead>';
+  const filaL=x=>`<tr><td>${nomT(x.t)}</td><td>${x.c} · ${x.n}</td><td>${F(x.f0)}</td><td>${F(x.f1)}</td><td>${x.res==='APROBACION'?'Aprobó':'Observaciones'}</td><td style="text-align:center">${x.susp?x.bruto+' <span style="color:var(--ink2)">− '+x.susp+'</span>':x.bruto}</td><td style="text-align:center">${pill(x.d)}</td></tr>`;
+  const pintaL=()=>{
+    document.getElementById('t7Btns').innerHTML=Object.keys(nombres).map(k=>`<button class="sbtn${k===modo?' on':''}" data-m="${k}">${nombres[k]}</button>`).join('');
+    document.querySelectorAll('#t7Btns .sbtn').forEach(b=>b.onclick=()=>{modo=b.dataset.m;vl=false;pintaL();});
+    const base=cerr.filter(x=>modo==='todo'||(modo==='antes'?x.p==='antes':x.p==='despues')).sort((a,b)=>b.d-a.d||b.bruto-a.bruto);
+    const l=vl?base:base.slice(0,15);
+    document.getElementById('t7Lentas').innerHTML=base.length?hL+'<tbody>'+l.map(filaL).join('')+'</tbody>':'<tbody><tr><td>Sin respuestas en este periodo.</td></tr></tbody>';
+    document.getElementById('t7LentasMas').innerHTML=base.length>15?`<span class="vermas" id="t7LM">${vl?'Ver solo las 15 más lentas':'Ver las '+base.length+' respuestas'}</span>`:'';
+    const b=document.getElementById('t7LM'); if(b) b.onclick=()=>{vl=!vl;pintaL();}; };
+  pintaL();
+
+  /* Por tramo */
+  let t='<thead><tr><th rowspan="2">Tramo</th><th colspan="2" style="text-align:center">Antes de la suspensión</th><th colspan="2" style="text-align:center">Después de la suspensión</th><th colspan="2" style="text-align:center">Esperando hoy</th></tr><tr><th>Resp.</th><th>Prom. días</th><th>Resp.</th><th>Prom. días</th><th>Entregas</th><th>Más antigua (días)</th></tr></thead><tbody>';
+  TRAMOS.forEach(tr=>{
+    const a=G.antes.filter(x=>x.t===tr.k).map(x=>x.d), d=G.despues.filter(x=>x.t===tr.k).map(x=>x.d), p=pend.filter(x=>x.t===tr.k).map(x=>x.d);
+    const mp=p.length?Math.max.apply(null,p):null, pa=prom(a), pd=prom(d);
+    t+=`<tr><td>${tr.name}</td><td style="text-align:center">${a.length}</td><td style="text-align:center">${pa===null?'—':pill(pa)}</td><td style="text-align:center">${d.length}</td><td style="text-align:center">${pd===null?'—':pill(pd)}</td><td style="text-align:center">${p.length}</td><td style="text-align:center">${mp===null?'—':pill(mp)}</td></tr>`;
+  });
+  document.getElementById('t7Tramo').innerHTML=t+'</tbody>';
+
+  document.getElementById('t7Nota').innerHTML=`<b>Notas del método.</b> Días corridos (calendario) entre la fecha de la entrega y la de la respuesta, menos los días de suspensión (${F(SUSP_INI)} a ${F(SUSP_FIN)}) que caigan dentro de ese intervalo. Una respuesta se ubica "antes" si fue hasta el ${F(SUSP_INI)} y "después" si fue después del ${F(SUSP_FIN)}${G.durante.length?` (${G.durante.length} respondida(s) durante la suspensión no entran en ninguno de los dos grupos)`:''}. Las entregas sin respuesta se cuentan hasta hoy. ${marcas?`Se omitieron ${marcas} filas internas marcadas "SUSPENSIÓN" de la bitácora, que no son respuestas reales de la interventoría. `:''}Los límites de 15 y 30 días son referencias de lectura de esta página, no plazos contractuales. Si se entrega de nuevo un componente que ya tenía observaciones, cada entrega se mide por separado.`;
 })();
 
 }  /* fin de render */
